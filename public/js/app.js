@@ -201,13 +201,6 @@ const App = {
         EntregadosModule.init();
         break;
 
-      case 'clientes':
-        document.getElementById('pageClientes').style.display = 'block';
-        if (pageTitle) pageTitle.textContent = 'Directorio de Clientes';
-        if (pageSubtitle) pageSubtitle.textContent = 'Gestión de clientes (entregadores), historial de cheques y utilidades';
-        ClientesModule.init();
-        break;
-
       default:
         window.location.hash = '#dashboard';
         break;

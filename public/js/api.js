@@ -1,18 +1,25 @@
 // API Client & Utilidades Globales
+try {
+  // Limpiar tokens persistentes antiguos para requerir login al ingresar
+  localStorage.removeItem('token');
+} catch (e) {}
 
 const API = {
   baseUrl: '/api',
 
   getToken() {
-    return localStorage.getItem('token') || '';
+    return sessionStorage.getItem('token') || '';
   },
 
   setToken(token) {
     if (token) {
-      localStorage.setItem('token', token);
+      sessionStorage.setItem('token', token);
     } else {
-      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
     }
+    try {
+      localStorage.removeItem('token');
+    } catch (e) {}
   },
 
   async request(endpoint, options = {}) {

@@ -91,7 +91,7 @@ async function crearCheque(req, res) {
  */
 async function obtenerCartera(req, res) {
   try {
-    const { estado, banco, entregador, search, desde, hasta, soloAlertas, ordenarPor, orden } = req.query;
+    const { estado, banco, entregador, cliente, search, desde, hasta, soloAlertas, ordenarPor, orden } = req.query;
     const pool = getPool();
 
     let query = 'SELECT * FROM cheques WHERE 1=1';
@@ -108,9 +108,10 @@ async function obtenerCartera(req, res) {
       params.push(`%${banco}%`);
     }
 
-    if (entregador) {
-      query += ' AND entregador LIKE ?';
-      params.push(`%${entregador}%`);
+    const filtroEntregador = (cliente || entregador || '').trim();
+    if (filtroEntregador) {
+      query += ' AND entregador = ?';
+      params.push(filtroEntregador);
     }
 
     if (desde) {

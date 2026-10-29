@@ -17,6 +17,7 @@ const DashboardModule = {
   bindEvents() {
     const selectAnio = document.getElementById('dashFiltroAnio');
     const selectMes = document.getElementById('dashFiltroMes');
+    const selectCliente = document.getElementById('dashFiltroCliente');
 
     if (selectAnio) {
       selectAnio.addEventListener('change', () => this.cargarMetricas());
@@ -24,19 +25,25 @@ const DashboardModule = {
     if (selectMes) {
       selectMes.addEventListener('change', () => this.cargarMetricas());
     }
+    if (selectCliente) {
+      selectCliente.addEventListener('change', () => this.cargarMetricas());
+    }
   },
 
   async cargarMetricas() {
     const selectAnio = document.getElementById('dashFiltroAnio');
     const selectMes = document.getElementById('dashFiltroMes');
+    const selectCliente = document.getElementById('dashFiltroCliente');
 
     const params = new URLSearchParams();
     if (selectAnio && selectAnio.value) params.append('anio', selectAnio.value);
     if (selectMes && selectMes.value) params.append('mes', selectMes.value);
+    if (selectCliente && selectCliente.value) params.append('cliente', selectCliente.value);
 
     try {
       const data = await API.get(`/dashboard/metricas?${params.toString()}`);
       this.actualizarComboAnios(data.aniosDisponibles);
+      this.actualizarComboClientes(data.clientesDisponibles);
       this.renderKPIs(data.resumen);
       this.renderAlertas(data.chequesAlerta);
       this.renderGraficos(data);
@@ -70,6 +77,20 @@ const DashboardModule = {
     }
 
     this.aniosCargados = true;
+  },
+
+  actualizarComboClientes(clientesDisponibles = []) {
+    const selectCliente = document.getElementById('dashFiltroCliente');
+    if (!selectCliente || !clientesDisponibles) return;
+
+    const valorActual = selectCliente.value;
+    selectCliente.innerHTML = `
+      <option value="">Todos los clientes</option>
+      ${clientesDisponibles.map(c => `<option value="${c}">${c}</option>`).join('')}
+    `;
+    if (valorActual) {
+      selectCliente.value = valorActual;
+    }
   },
 
   renderKPIs(resumen) {

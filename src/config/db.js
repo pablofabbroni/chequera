@@ -159,19 +159,25 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 4. Sembrar usuario administrador inicial si no existe
-    const [users] = await pool.query('SELECT id FROM usuarios LIMIT 1');
-    if (users.length === 0) {
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@cheques.com';
-      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-      const adminName = process.env.ADMIN_NAME || 'Administrador';
-      const hash = await bcrypt.hash(adminPassword, 10);
+    // 4. Sembrar o actualizar usuario administrador inicial
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const hash = await bcrypt.hash(adminPassword, 10);
+    const [existingAdmin] = await pool.query(
+      "SELECT id FROM usuarios WHERE email = 'administrador' OR email = 'admin@cheques.com' OR LOWER(nombre) = 'administrador' LIMIT 1"
+    );
 
+    if (existingAdmin.length === 0) {
       await pool.query(
         'INSERT INTO usuarios (nombre, email, password, rol) VALUES (?, ?, ?, ?)',
-        [adminName, adminEmail, hash, 'admin']
+        ['administrador', 'admin@cheques.com', hash, 'admin']
       );
-      console.log(`[DB] Usuario administrador creado por defecto: ${adminEmail} (Clave: ${adminPassword})`);
+      console.log(`[DB] Usuario administrador creado por defecto: administrador / admin@cheques.com (Clave: ${adminPassword})`);
+    } else {
+      await pool.query(
+        "UPDATE usuarios SET password = ?, nombre = 'administrador' WHERE id = ?",
+        [hash, existingAdmin[0].id]
+      );
+      console.log(`[DB] Usuario administrador verificado y actualizado con clave ${adminPassword}.`);
     }
 
     console.log('[DB] Conexión a MySQL exitosa y tablas inicializadas correctamente.');

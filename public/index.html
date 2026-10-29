@@ -28,7 +28,7 @@
   <!-- ========================================== -->
   <!-- VISTA DE LOGIN (Autenticación Glassmorphic) -->
   <!-- ========================================== -->
-  <div id="viewLogin" style="display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 20px;">
+  <div id="viewLogin" style="display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 20px;">
     <div class="glass-card" style="width: 100%; max-width: 440px; padding: 40px 32px; border-radius: var(--radius-lg);">
       <div style="text-align: center; margin-bottom: 32px;">
         <div class="brand-icon" style="margin: 0 auto 16px; width: 56px; height: 56px; border-radius: 16px;">
@@ -44,22 +44,18 @@
 
       <form id="formLogin">
         <div class="form-group" style="margin-bottom: 18px;">
-          <label class="form-label" for="loginEmail">Correo Electrónico</label>
-          <input type="email" id="loginEmail" class="form-control" placeholder="admin@cheques.com" value="admin@cheques.com" required>
+          <label class="form-label" for="loginEmail">Usuario</label>
+          <input type="text" id="loginEmail" class="form-control" autocomplete="username" required>
         </div>
 
         <div class="form-group" style="margin-bottom: 24px;">
           <label class="form-label" for="loginPassword">Contraseña</label>
-          <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" value="admin123" required>
+          <input type="password" id="loginPassword" class="form-control" autocomplete="current-password" required>
         </div>
 
         <button type="submit" id="btnLoginSubmit" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1rem;">
           <span>Iniciar Sesión</span>
         </button>
-
-        <div style="margin-top: 20px; padding: 12px; background: rgba(255, 255, 255, 0.04); border-radius: var(--radius-sm); font-size: 0.78rem; color: var(--text-dim); text-align: center;">
-          Acceso de demostración precargado: <strong>admin@cheques.com</strong> / <strong>admin123</strong>
-        </div>
       </form>
     </div>
   </div>
@@ -67,7 +63,7 @@
   <!-- ========================================== -->
   <!-- VISTA PRINCIPAL DE LA APLICACIÓN -->
   <!-- ========================================== -->
-  <div id="viewApp" class="app-container" style="display: flex;">
+  <div id="viewApp" class="app-container" style="display: none;">
 
     <!-- Sidebar Desktop -->
     <aside class="sidebar" id="mainSidebar">
@@ -98,11 +94,6 @@
         <a href="#entregados" class="nav-item">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           <span>Entregados (Salidas)</span>
-        </a>
-
-        <a href="#clientes" class="nav-item">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span>Clientes</span>
         </a>
       </nav>
 
@@ -231,6 +222,12 @@
                   <option value="10">Octubre</option>
                   <option value="11">Noviembre</option>
                   <option value="12">Diciembre</option>
+                </select>
+              </div>
+              <div class="filter-item-inline">
+                <label for="dashFiltroCliente" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Cliente:</label>
+                <select id="dashFiltroCliente" class="form-control filter-select">
+                  <option value="">Todos los clientes</option>
                 </select>
               </div>
             </div>
@@ -384,9 +381,6 @@
                   Clientes con mayor volumen operado y mayor rentabilidad generada en intereses descontados.
                 </p>
               </div>
-              <a href="#clientes" class="btn btn-secondary btn-sm" style="font-size: 0.78rem;">
-                Ver Directorio Completo ↗
-              </a>
             </div>
             
             <div class="table-responsive">
@@ -574,6 +568,13 @@
               </div>
 
               <div class="filter-group">
+                <!-- Filtro de Cliente -->
+                <div class="filter-item-inline" style="min-width: 170px;">
+                  <select id="carteraFiltroCliente" class="form-control" style="font-size: 0.82rem; padding: 6px 12px; height: 36px; min-width: 160px;">
+                    <option value="">Todos los clientes</option>
+                  </select>
+                </div>
+
                 <!-- Buscador -->
                 <div class="search-input-wrapper">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -713,88 +714,6 @@
             </div>
 
           </div>
-        <!-- ======================================================== -->
-        <!-- PÁGINA 5: DIRECTORIO DE CLIENTES (Entregadores) -->
-        <!-- ======================================================== -->
-        <section id="pageClientes" class="page-view" style="display: none;">
-          <div class="glass-card">
-            
-            <!-- Barra Superior y Contadores -->
-            <div class="filter-bar">
-              <div>
-                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; color: #fff;">
-                  Directorio de Clientes (Entregadores)
-                </h2>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
-                  Base de clientes que operan y descuentan cheques en la empresa.
-                </p>
-              </div>
-
-              <div class="filter-group">
-                <!-- Buscador -->
-                <div class="search-input-wrapper">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  <input type="text" id="searchClientes" class="form-control" placeholder="Buscar por nombre, CUIT, teléfono...">
-                </div>
-
-                <button id="btnNuevoClienteTab" class="btn btn-primary btn-sm">
-                  + Registrar Cliente
-                </button>
-              </div>
-            </div>
-
-            <!-- Resumen de Clientes -->
-            <div class="entregados-summary-box">
-              <div class="summary-col">
-                <span class="summary-label">Total Clientes Registrados</span>
-                <div id="resumenTotalClientes" class="summary-val-white">0 clientes</div>
-              </div>
-              <div class="summary-col border-left">
-                <span class="summary-label">Volumen Total Operado</span>
-                <div id="resumenVolumenClientes" class="summary-val-white">$ 0,00</div>
-              </div>
-              <div class="summary-col border-left">
-                <span class="summary-label">Ganancia Total Generada</span>
-                <div id="resumenGananciaClientes" class="summary-val-blue" style="color: var(--accent-emerald);">$ 0,00</div>
-              </div>
-            </div>
-
-            <!-- Tabla de Clientes (Escritorio) -->
-            <div class="table-responsive desktop-table-view">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th style="width: 26%;">Cliente / CUIT</th>
-                    <th style="width: 22%;">Contacto</th>
-                    <th style="width: 16%;">Cheques</th>
-                    <th style="width: 22%;">Volumen y Ganancia</th>
-                    <th style="width: 14%;">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="tablaClientesBody">
-                  <!-- Inyectado dinámicamente -->
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Tarjetas de Clientes (Móvil) -->
-            <div id="clientesMobileCards" class="mobile-cards-view">
-              <!-- Inyectado dinámicamente en móviles -->
-            </div>
-
-            <!-- Empty State -->
-            <div id="clientesEmptyState" style="display: none; text-align: center; padding: 48px 20px;">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-dim); margin-bottom: 12px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              <h3 style="color: #fff; font-size: 1.1rem; font-weight: 600;">No se encontraron clientes</h3>
-              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 6px 0 16px;">
-                No hay clientes registrados o que coincidan con la búsqueda.
-              </p>
-              <button class="btn btn-primary btn-sm" onclick="ClientesModule.abrirModalNuevo()">
-                + Registrar primer cliente
-              </button>
-            </div>
-
-          </div>
         </section>
 
       </main>
@@ -819,11 +738,6 @@
       <a href="#entregados" class="mobile-nav-item">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <span>Entregas</span>
-      </a>
-
-      <a href="#clientes" class="mobile-nav-item">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span>Clientes</span>
       </a>
     </nav>
 
@@ -1034,13 +948,13 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=2.5.0"></script>
-  <script src="/js/notifications.js?v=2.5.0"></script>
-  <script src="/js/dashboard.js?v=2.5.0"></script>
-  <script src="/js/ingreso.js?v=2.5.0"></script>
-  <script src="/js/cartera.js?v=2.5.0"></script>
-  <script src="/js/entregados.js?v=2.5.0"></script>
-  <script src="/js/clientes.js?v=2.5.0"></script>
-  <script src="/js/app.js?v=2.5.0"></script>
+  <script src="/js/api.js?v=2.6.0"></script>
+  <script src="/js/notifications.js?v=2.6.0"></script>
+  <script src="/js/dashboard.js?v=2.6.0"></script>
+  <script src="/js/ingreso.js?v=2.6.0"></script>
+  <script src="/js/cartera.js?v=2.6.0"></script>
+  <script src="/js/entregados.js?v=2.6.0"></script>
+  <script src="/js/clientes.js?v=2.6.0"></script>
+  <script src="/js/app.js?v=2.6.0"></script>
 </body>
 </html>

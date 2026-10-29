@@ -5,14 +5,22 @@ const { JWT_SECRET } = require('../middlewares/authMiddleware');
 
 async function login(req, res) {
   try {
-    const { email, password } = req.body;
+    const { email, usuario, password } = req.body;
+    const loginUser = (email || usuario || '').trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Debe ingresar el email y la contraseña.' });
+    if (!loginUser || !password) {
+      return res.status(400).json({ error: 'Debe ingresar el usuario y la contraseña.' });
     }
 
     const pool = getPool();
-    const [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ? LIMIT 1', [email]);
+    const [rows] = await pool.query(
+      `SELECT * FROM usuarios 
+       WHERE LOWER(email) = LOWER(?) 
+          OR LOWER(nombre) = LOWER(?) 
+          OR email = CONCAT(?, '@cheques.com') 
+       LIMIT 1`,
+      [loginUser, loginUser, loginUser]
+    );
 
     if (rows.length === 0) {
       return res.status(401).json({ error: 'Credenciales inválidas.' });

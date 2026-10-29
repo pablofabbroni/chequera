@@ -3,7 +3,7 @@ const { calcularMetricasCheque } = require('../services/alertService');
 
 async function obtenerMetricasDashboard(req, res) {
   try {
-    const { anio, mes } = req.query;
+    const { anio, mes, cliente } = req.query;
     const pool = getPool();
 
     let filtroFecha = '1=1';
@@ -16,6 +16,11 @@ async function obtenerMetricasDashboard(req, res) {
         filtroFecha += ' AND MONTH(fecha_recepcion) = ?';
         params.push(parseInt(mes, 10));
       }
+    }
+
+    if (cliente && cliente.trim()) {
+      filtroFecha += ' AND entregador = ?';
+      params.push(cliente.trim());
     }
 
     // 1. Totales Generales según filtro
@@ -77,17 +82,25 @@ async function obtenerMetricasDashboard(req, res) {
     `);
 
     // 3. Proyección de Cobros (Cash Flow futuro de cheques Pendientes)
-    const [proyeccionRows] = await pool.query(`
+    let proySql = `
       SELECT 
         DATE_FORMAT(fecha_cobro, '%Y-%m') AS periodo_cobro,
         COUNT(*) AS cantidad,
         COALESCE(SUM(importe), 0) AS total_a_cobrar
       FROM cheques
       WHERE estado = 'Pendiente'
+    `;
+    const proyParams = [];
+    if (cliente && cliente.trim()) {
+      proySql += ' AND entregador = ?';
+      proyParams.push(cliente.trim());
+    }
+    proySql += `
       GROUP BY DATE_FORMAT(fecha_cobro, '%Y-%m')
       ORDER BY periodo_cobro ASC
       LIMIT 6
-    `);
+    `;
+    const [proyeccionRows] = await pool.query(proySql, proyParams);
 
     // 4. Distribución por Bancos principales
     const [bancosRows] = await pool.query(`
@@ -96,10 +109,11 @@ async function obtenerMetricasDashboard(req, res) {
         COUNT(*) AS cantidad,
         COALESCE(SUM(importe), 0) AS total_importe
       FROM cheques
+      WHERE ${filtroFecha}
       GROUP BY banco
       ORDER BY total_importe DESC
       LIMIT 5
-    `);
+    `, params);
 
     // 5. Top Entregadores / Clientes que descuentan
     const [entregadoresRows] = await pool.query(`
@@ -115,9 +129,14 @@ async function obtenerMetricasDashboard(req, res) {
     `);
 
     // 6. Cheques que requieren atención urgente
-    const [pendientes] = await pool.query(
-      "SELECT * FROM cheques WHERE estado = 'Pendiente' ORDER BY fecha_cobro ASC"
-    );
+    let alertaSql = "SELECT * FROM cheques WHERE estado = 'Pendiente'";
+    const alertaParams = [];
+    if (cliente && cliente.trim()) {
+      alertaSql += " AND entregador = ?";
+      alertaParams.push(cliente.trim());
+    }
+    alertaSql += " ORDER BY fecha_cobro ASC";
+    const [pendientes] = await pool.query(alertaSql, alertaParams);
 
     const chequesAlerta = [];
     for (const ch of pendientes) {
@@ -141,6 +160,19 @@ async function obtenerMetricasDashboard(req, res) {
     `);
     const aniosDisponibles = aniosRows.map(r => r.anio).filter(Boolean);
 
+    // 8. Clientes disponibles en el sistema (dinámico)
+    const [clientesRows] = await pool.query(`
+      SELECT DISTINCT TRIM(entregador) AS cliente 
+      FROM cheques 
+      WHERE entregador IS NOT NULL AND TRIM(entregador) != ''
+      UNION
+      SELECT DISTINCT TRIM(nombre) AS cliente
+      FROM clientes
+      WHERE nombre IS NOT NULL AND TRIM(nombre) != ''
+      ORDER BY cliente ASC
+    `);
+    const clientesDisponibles = clientesRows.map(r => r.cliente).filter(Boolean);
+
     return res.json({
       resumen: {
         totalGlobalCheques,
@@ -154,6 +186,7 @@ async function obtenerMetricasDashboard(req, res) {
         entregados: resumenEstados.Entregado
       },
       aniosDisponibles,
+      clientesDisponibles,
       proyeccionCobros: proyeccionRows,
       topBancos: bancosRows,
       topEntregadores: entregadoresRows,

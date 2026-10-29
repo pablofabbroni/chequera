@@ -6,6 +6,7 @@ const CarteraModule = {
   filtroActual: {
     estado: 'Pendiente',
     search: '',
+    cliente: '',
     soloAlertas: false
   },
 
@@ -14,6 +15,7 @@ const CarteraModule = {
       this.bindEvents();
       this.initialized = true;
     }
+    this.cargarComboClientes();
     this.cargarCheques();
   },
 
@@ -28,6 +30,15 @@ const CarteraModule = {
         this.cargarCheques();
       });
     });
+
+    // Selector de Cliente
+    const selectCliente = document.getElementById('carteraFiltroCliente');
+    if (selectCliente) {
+      selectCliente.addEventListener('change', (e) => {
+        this.filtroActual.cliente = e.target.value;
+        this.cargarCheques();
+      });
+    }
 
     // Buscador
     const searchInput = document.getElementById('searchCartera');
@@ -67,6 +78,28 @@ const CarteraModule = {
     }
   },
 
+  async cargarComboClientes() {
+    const select = document.getElementById('carteraFiltroCliente');
+    if (!select) return;
+
+    try {
+      const res = await API.get('/clientes');
+      const clientes = res.clientes || [];
+      const valorPrevio = this.filtroActual.cliente || select.value;
+
+      select.innerHTML = `
+        <option value="">Todos los clientes</option>
+        ${clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('')}
+      `;
+
+      if (valorPrevio) {
+        select.value = valorPrevio;
+      }
+    } catch (e) {
+      console.error('Error cargando clientes en filtro de cartera:', e);
+    }
+  },
+
   async cargarCheques() {
     const tableBody = document.getElementById('tablaCarteraBody');
     const mobileCards = document.getElementById('carteraMobileCards');
@@ -95,6 +128,10 @@ const CarteraModule = {
         search: this.filtroActual.search,
         soloAlertas: this.filtroActual.soloAlertas ? 'true' : 'false'
       });
+
+      if (this.filtroActual.cliente) {
+        queryParams.append('cliente', this.filtroActual.cliente);
+      }
 
       const res = await API.get(`/cheques?${queryParams.toString()}`);
       this.cheques = res.cheques || [];
