@@ -2,34 +2,61 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306', 10),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'root',
-  database: process.env.DB_NAME || 'cheques_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  decimalNumbers: true
-};
+function getDBConfig() {
+  if (process.env.DATABASE_URL) {
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      return {
+        host: url.hostname,
+        port: parseInt(url.port || '3306', 10),
+        user: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+        database: url.pathname.replace(/^\//, '') || 'cheques_db',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        decimalNumbers: true
+      };
+    } catch (e) {
+      console.warn('[DB] No se pudo parsear DATABASE_URL, utilizando variables individuales:', e.message);
+    }
+  }
+
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'root',
+    database: process.env.DB_NAME || 'cheques_db',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    decimalNumbers: true
+  };
+}
 
 let pool = null;
 
 async function initDB() {
+  const dbConfig = getDBConfig();
   try {
-    // 1. Conexión inicial sin base de datos para asegurar su existencia
-    const tempConnection = await mysql.createConnection({
-      host: dbConfig.host,
-      port: dbConfig.port,
-      user: dbConfig.user,
-      password: dbConfig.password
-    });
+    // 1. Intento de asegurar la existencia de la base de datos (si hay permisos)
+    try {
+      const tempConnection = await mysql.createConnection({
+        host: dbConfig.host,
+        port: dbConfig.port,
+        user: dbConfig.user,
+        password: dbConfig.password
+      });
 
-    await tempConnection.query(
-      `CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
-    );
-    await tempConnection.end();
+      await tempConnection.query(
+        `CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+      );
+      await tempConnection.end();
+    } catch (errPerm) {
+      // En bases de datos gestionadas (ej. Coolify/Railway), el usuario ya tiene su BD asignada sin permisos globales de CREATE DATABASE
+      console.log('[DB] Conectando directamente a la base de datos asignada:', dbConfig.database);
+    }
 
     // 2. Crear el pool principal
     pool = mysql.createPool(dbConfig);
