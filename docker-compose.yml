@@ -1,0 +1,56 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: cheques_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-cheques_db}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - cheques_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cheques_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_NAME: ${DB_NAME:-cheques_db}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_gestion_cheques_2026_antigravity}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-BKSBrD0sQ-NAEsu73DxAacBOEIOJNQN1efeYc6aMujl7PbGF1jJTSv3M6bBKMu0k0HHlEsrGH5nI3qpOiPtGf9k}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-pBzOdeme4F4B8PUK7GkfqceJ9JD3RL3cZue8aYn9780}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@cheques.com}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@cheques.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    ports:
+      - "3000:3000"
+    networks:
+      - cheques_net
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  cheques_net:
+    driver: bridge

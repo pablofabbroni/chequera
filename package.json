@@ -1,0 +1,22 @@
+{
+  "name": "sistema-gestion-cheques",
+  "version": "1.0.0",
+  "description": "Sistema profesional para el control y gestión de cheques con alertas, cartera, entregados y dashboard financiero",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/scripts/seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.12.0",
+    "web-push": "^3.6.7",
+    "xlsx": "^0.18.5"
+  }
+}

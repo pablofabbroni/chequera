@@ -1,0 +1,159 @@
+const { getPool } = require('../config/db');
+const { calcularMetricasCheque } = require('../services/alertService');
+
+async function obtenerMetricasDashboard(req, res) {
+  try {
+    const { anio, mes } = req.query;
+    const pool = getPool();
+
+    let filtroFecha = '1=1';
+    const params = [];
+
+    if (anio) {
+      filtroFecha += ' AND YEAR(fecha_recepcion) = ?';
+      params.push(parseInt(anio, 10));
+      if (mes) {
+        filtroFecha += ' AND MONTH(fecha_recepcion) = ?';
+        params.push(parseInt(mes, 10));
+      }
+    }
+
+    // 1. Totales Generales según filtro
+    const [totalesRows] = await pool.query(`
+      SELECT 
+        estado,
+        COUNT(*) AS cantidad,
+        COALESCE(SUM(importe), 0) AS total_importe,
+        COALESCE(SUM(interes_cobrado), 0) AS total_interes,
+        COALESCE(SUM(dinero_saliente), 0) AS total_saliente
+      FROM cheques
+      WHERE ${filtroFecha}
+      GROUP BY estado
+    `, params);
+
+    const resumenEstados = {
+      Pendiente: { cantidad: 0, importe: 0, interes: 0, saliente: 0 },
+      Cobrado: { cantidad: 0, importe: 0, interes: 0, saliente: 0 },
+      Rechazado: { cantidad: 0, importe: 0, interes: 0, saliente: 0 },
+      Entregado: { cantidad: 0, importe: 0, interes: 0, saliente: 0 }
+    };
+
+    let totalGlobalCheques = 0;
+    let totalGlobalImporte = 0;
+    let totalGananciasNetas = 0;
+    let totalDineroDesembolsado = 0;
+
+    totalesRows.forEach(row => {
+      if (resumenEstados[row.estado]) {
+        resumenEstados[row.estado] = {
+          cantidad: Number(row.cantidad),
+          importe: Number(row.total_importe),
+          interes: Number(row.total_interes),
+          saliente: Number(row.total_saliente)
+        };
+      }
+      totalGlobalCheques += Number(row.cantidad);
+      totalGlobalImporte += Number(row.total_importe);
+      totalGananciasNetas += Number(row.total_interes);
+      totalDineroDesembolsado += Number(row.total_saliente);
+    });
+
+    // Tasa promedio ponderada
+    const tasaPromedioPonderada = totalGlobalImporte > 0
+      ? Math.round(((totalGananciasNetas / totalGlobalImporte) * 100) * 100) / 100
+      : 0;
+
+    // 2. Evolución mensual (últimos 12 meses o meses del año filtrado)
+    const [evolucionRows] = await pool.query(`
+      SELECT 
+        DATE_FORMAT(fecha_recepcion, '%Y-%m') AS periodo,
+        COUNT(*) AS cantidad,
+        COALESCE(SUM(importe), 0) AS total_importe,
+        COALESCE(SUM(interes_cobrado), 0) AS total_ganancia
+      FROM cheques
+      GROUP BY DATE_FORMAT(fecha_recepcion, '%Y-%m')
+      ORDER BY periodo DESC
+      LIMIT 12
+    `);
+
+    // 3. Proyección de Cobros (Cash Flow futuro de cheques Pendientes)
+    const [proyeccionRows] = await pool.query(`
+      SELECT 
+        DATE_FORMAT(fecha_cobro, '%Y-%m') AS periodo_cobro,
+        COUNT(*) AS cantidad,
+        COALESCE(SUM(importe), 0) AS total_a_cobrar
+      FROM cheques
+      WHERE estado = 'Pendiente'
+      GROUP BY DATE_FORMAT(fecha_cobro, '%Y-%m')
+      ORDER BY periodo_cobro ASC
+      LIMIT 6
+    `);
+
+    // 4. Distribución por Bancos principales
+    const [bancosRows] = await pool.query(`
+      SELECT 
+        banco,
+        COUNT(*) AS cantidad,
+        COALESCE(SUM(importe), 0) AS total_importe
+      FROM cheques
+      GROUP BY banco
+      ORDER BY total_importe DESC
+      LIMIT 5
+    `);
+
+    // 5. Top Entregadores / Clientes que descuentan
+    const [entregadoresRows] = await pool.query(`
+      SELECT 
+        entregador,
+        COUNT(*) AS cantidad,
+        COALESCE(SUM(importe), 0) AS total_importe,
+        COALESCE(SUM(interes_cobrado), 0) AS ganancia_generada
+      FROM cheques
+      GROUP BY entregador
+      ORDER BY ganancia_generada DESC
+      LIMIT 5
+    `);
+
+    // 6. Cheques que requieren atención urgente
+    const [pendientes] = await pool.query(
+      "SELECT * FROM cheques WHERE estado = 'Pendiente' ORDER BY fecha_cobro ASC"
+    );
+
+    const chequesAlerta = [];
+    for (const ch of pendientes) {
+      const met = calcularMetricasCheque(ch);
+      if (met.nivelAlerta === 'POR_VENCER_LEGAL' || met.nivelAlerta === 'COBRO_CERCANO' || met.nivelAlerta === 'VENCIDO') {
+        chequesAlerta.push({
+          ...ch,
+          metricas: met
+        });
+      }
+    }
+
+    return res.json({
+      resumen: {
+        totalGlobalCheques,
+        totalGlobalImporte,
+        totalGananciasNetas, // Ganancias generadas por intereses
+        totalDineroDesembolsado,
+        tasaPromedioPonderada,
+        carteraPendiente: resumenEstados.Pendiente,
+        cobrados: resumenEstados.Cobrado,
+        rechazados: resumenEstados.Rechazado,
+        entregados: resumenEstados.Entregado
+      },
+      evolucionMensual: evolucionRows.reverse(),
+      proyeccionCobros: proyeccionRows,
+      topBancos: bancosRows,
+      topEntregadores: entregadoresRows,
+      chequesAlerta: chequesAlerta.slice(0, 10)
+    });
+  } catch (error) {
+    console.error('[DASHBOARD METRICAS ERROR]', error);
+    return res.status(500).json({ error: 'Error al calcular métricas del dashboard.' });
+  }
+}
+
+module.exports = {
+  obtenerMetricasDashboard
+};
