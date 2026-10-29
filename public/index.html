@@ -115,16 +115,19 @@
       </div>
     </aside>
 
+    <!-- Backdrop para cerrar sidebar en móviles -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
     <!-- Área Principal -->
     <div class="main-wrapper">
       
       <!-- Top Navbar -->
       <header class="top-navbar">
-        <div style="display: flex; align-items: center; gap: 14px;">
-          <button id="btnToggleSidebar" class="btn-icon menu-toggle-btn">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+          <button id="btnToggleSidebar" class="btn-icon menu-toggle-btn" aria-label="Abrir menú">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <div class="page-headline">
+          <div class="page-headline" style="min-width: 0;">
             <h1 id="navbarPageTitle">Panel Principal</h1>
             <p id="navbarPageSubtitle">Métricas, análisis de ganancias y proyección de cobros</p>
           </div>
@@ -134,7 +137,7 @@
           <!-- Botón de Notificaciones Push Celular -->
           <button id="btnActivarPush" class="btn btn-secondary btn-sm" title="Recibir alertas de vencimiento en tu celular">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-            <span>Activar Push en Celular</span>
+            <span class="push-btn-label">Activar Push en Celular</span>
           </button>
 
           <!-- Campana de Notificaciones -->
@@ -505,7 +508,7 @@
             
             <!-- Barra Superior y Pestañas de Estado -->
             <div class="filter-bar">
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <div class="cartera-status-container">
                 <button class="btn btn-secondary btn-sm cartera-status-tab active" data-status="Pendiente">
                   Pendientes (Stock)
                 </button>
@@ -546,8 +549,8 @@
               </div>
             </div>
 
-            <!-- Tabla de Cartera -->
-            <div class="table-responsive">
+            <!-- Tabla de Cartera (Escritorio) -->
+            <div class="table-responsive desktop-table-view">
               <table class="custom-table">
                 <thead>
                   <tr>
@@ -566,6 +569,11 @@
                   <!-- Inyectado dinámicamente -->
                 </tbody>
               </table>
+            </div>
+
+            <!-- Tarjetas de Cartera (Móvil) -->
+            <div id="carteraMobileCards" class="mobile-cards-view">
+              <!-- Inyectado dinámicamente en móviles -->
             </div>
 
             <!-- Empty State -->
@@ -615,19 +623,19 @@
             </div>
 
             <!-- Resumen de Pagos en Cheques -->
-            <div style="display: flex; gap: 20px; margin: 16px 0 24px; padding: 16px 20px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-md);">
-              <div>
-                <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Total Pagado con Cheques</span>
-                <div id="totalEntregadosImporte" style="font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 700; color: #fff;">$ 0,00</div>
+            <div class="entregados-summary-box">
+              <div class="summary-col">
+                <span class="summary-label">Total Pagado con Cheques</span>
+                <div id="totalEntregadosImporte" class="summary-val-white">$ 0,00</div>
               </div>
-              <div style="border-left: 1px solid var(--border-subtle); padding-left: 20px;">
-                <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Cheques Entregados</span>
-                <div id="totalEntregadosCantidad" style="font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--primary);">0 cheques</div>
+              <div class="summary-col border-left">
+                <span class="summary-label">Cheques Entregados</span>
+                <div id="totalEntregadosCantidad" class="summary-val-blue">0 cheques</div>
               </div>
             </div>
 
-            <!-- Tabla de Cheques Entregados -->
-            <div class="table-responsive">
+            <!-- Tabla de Cheques Entregados (Escritorio) -->
+            <div class="table-responsive desktop-table-view">
               <table class="custom-table">
                 <thead>
                   <tr>
@@ -644,6 +652,11 @@
                   <!-- Inyectado dinámicamente -->
                 </tbody>
               </table>
+            </div>
+
+            <!-- Tarjetas de Cheques Entregados (Móvil) -->
+            <div id="entregadosMobileCards" class="mobile-cards-view">
+              <!-- Inyectado dinámicamente en móviles -->
             </div>
 
             <!-- Empty State -->

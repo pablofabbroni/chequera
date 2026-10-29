@@ -29,28 +29,32 @@ const App = {
       btnLogout.addEventListener('click', () => this.handleLogout());
     }
 
-    // Toggle Sidebar Móvil
+    // Toggle Sidebar Móvil y Backdrop
     const btnToggleSidebar = document.getElementById('btnToggleSidebar');
     const sidebar = document.getElementById('mainSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+
+    const cerrarSidebar = () => {
+      if (sidebar) sidebar.classList.remove('open');
+      if (backdrop) backdrop.classList.remove('active');
+    };
+
     if (btnToggleSidebar && sidebar) {
-      btnToggleSidebar.addEventListener('click', () => {
-        sidebar.classList.toggle('open');
+      btnToggleSidebar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = sidebar.classList.toggle('open');
+        if (backdrop) backdrop.classList.toggle('active', isOpen);
       });
 
-      // Cerrar al hacer clic fuera en móviles
-      document.addEventListener('click', (e) => {
-        if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !btnToggleSidebar.contains(e.target)) {
-          sidebar.classList.remove('open');
-        }
-      });
+      if (backdrop) {
+        backdrop.addEventListener('click', cerrarSidebar);
+      }
     }
 
     // Cerrar sidebar al hacer clic en un link en móviles
     const navLinks = document.querySelectorAll('.nav-item, .mobile-nav-item');
     navLinks.forEach(link => {
-      link.addEventListener('click', () => {
-        if (sidebar) sidebar.classList.remove('open');
-      });
+      link.addEventListener('click', cerrarSidebar);
     });
   },
 
