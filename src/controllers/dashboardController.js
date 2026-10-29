@@ -130,6 +130,17 @@ async function obtenerMetricasDashboard(req, res) {
       }
     }
 
+    // 7. Años existentes con cheques en el sistema (dinámico)
+    const [aniosRows] = await pool.query(`
+      SELECT DISTINCT anio FROM (
+        SELECT YEAR(fecha_cobro) AS anio FROM cheques WHERE fecha_cobro IS NOT NULL
+        UNION
+        SELECT YEAR(fecha_recepcion) AS anio FROM cheques WHERE fecha_recepcion IS NOT NULL
+      ) AS t
+      ORDER BY anio DESC
+    `);
+    const aniosDisponibles = aniosRows.map(r => r.anio).filter(Boolean);
+
     return res.json({
       resumen: {
         totalGlobalCheques,
@@ -142,7 +153,7 @@ async function obtenerMetricasDashboard(req, res) {
         rechazados: resumenEstados.Rechazado,
         entregados: resumenEstados.Entregado
       },
-      evolucionMensual: evolucionRows.reverse(),
+      aniosDisponibles,
       proyeccionCobros: proyeccionRows,
       topBancos: bancosRows,
       topEntregadores: entregadoresRows,

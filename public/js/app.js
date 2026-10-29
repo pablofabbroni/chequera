@@ -201,6 +201,13 @@ const App = {
         EntregadosModule.init();
         break;
 
+      case 'clientes':
+        document.getElementById('pageClientes').style.display = 'block';
+        if (pageTitle) pageTitle.textContent = 'Directorio de Clientes';
+        if (pageSubtitle) pageSubtitle.textContent = 'Gestión de clientes (entregadores), historial de cheques y utilidades';
+        ClientesModule.init();
+        break;
+
       default:
         window.location.hash = '#dashboard';
         break;
@@ -208,6 +215,16 @@ const App = {
 
     // Scroll arriba suave
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  },
+
+  irACarteraConFiltro(estado) {
+    window.location.hash = '#cartera';
+    setTimeout(() => {
+      const tab = document.querySelector(`.cartera-status-tab[data-status="${estado}"]`);
+      if (tab) {
+        tab.click();
+      }
+    }, 150);
   }
 };
 

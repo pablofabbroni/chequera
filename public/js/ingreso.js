@@ -1,11 +1,13 @@
-// Módulo de Ingreso de Cheques con Cálculos Financieros Reactivos
+// Módulo de Ingreso de Cheques con Cálculos Financieros Reactivos y Gestión Integrada de Clientes
 
 const IngresoModule = {
   initialized: false,
   isSubmitting: false,
+  clientes: [],
 
-  init() {
+  async init() {
     this.resetFechas();
+    await this.cargarComboClientes();
 
     if (this.initialized) {
       this.calcularEnVivo();
@@ -43,11 +45,102 @@ const IngresoModule = {
       });
     }
 
+    // Cliente entregador: Cambio de desplegable
+    const selectEntregador = document.getElementById('selectEntregador');
+    if (selectEntregador) {
+      selectEntregador.addEventListener('change', (e) => {
+        if (e.target.value === '__NUEVO__') {
+          this.abrirModalNuevoClienteRapido();
+        }
+      });
+    }
+
+    // Botón directo "+ Cargar nuevo cliente"
+    const btnNuevoCliente = document.getElementById('btnNuevoClienteRapido');
+    if (btnNuevoCliente) {
+      btnNuevoCliente.addEventListener('click', () => this.abrirModalNuevoClienteRapido());
+    }
+
+    // Formulario de creación rápida de cliente
+    const formQuickCliente = document.getElementById('formQuickCliente');
+    if (formQuickCliente) {
+      formQuickCliente.onsubmit = (e) => this.handleGuardarClienteRapido(e);
+    }
+
     // Único listener de envío de formulario para evitar duplicados
     form.onsubmit = (e) => this.handleSubmit(e);
 
     // Ejecutar cálculo inicial
     this.calcularEnVivo();
+  },
+
+  async cargarComboClientes(clienteASeleccionar = null) {
+    const select = document.getElementById('selectEntregador');
+    if (!select) return;
+
+    try {
+      const res = await API.get('/clientes');
+      this.clientes = res.clientes || [];
+
+      const valorPrevio = clienteASeleccionar || select.value;
+
+      select.innerHTML = `
+        <option value="">-- Seleccionar cliente registrado --</option>
+        <option value="__NUEVO__" style="color: var(--primary); font-weight: 700;">+ Cargar nuevo cliente...</option>
+        ${this.clientes.map(c => `<option value="${c.nombre}">${c.nombre} ${c.cuit ? `(CUIT: ${c.cuit})` : ''}</option>`).join('')}
+      `;
+
+      if (valorPrevio && valorPrevio !== '__NUEVO__') {
+        select.value = valorPrevio;
+      }
+    } catch (e) {
+      console.error('Error cargando clientes en select:', e);
+    }
+  },
+
+  abrirModalNuevoClienteRapido() {
+    const modal = document.getElementById('modalQuickCliente');
+    const form = document.getElementById('formQuickCliente');
+    if (!modal) return;
+    if (form) form.reset();
+    modal.classList.add('show');
+    setTimeout(() => {
+      document.getElementById('quickClienteNombre')?.focus();
+    }, 100);
+  },
+
+  async handleGuardarClienteRapido(e) {
+    e.preventDefault();
+    const nombre = document.getElementById('quickClienteNombre').value.trim();
+    const telefono = document.getElementById('quickClienteTelefono')?.value.trim() || '';
+    const cuit = document.getElementById('quickClienteCuit')?.value.trim() || '';
+
+    if (!nombre) {
+      showToast('El nombre del cliente es obligatorio.', 'error');
+      return;
+    }
+
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    if (btnSubmit) btnSubmit.disabled = true;
+
+    try {
+      const res = await API.post('/clientes', { nombre, telefono, cuit });
+      const clienteCreado = res.cliente;
+      showToast(`Cliente "${clienteCreado.nombre}" guardado y seleccionado.`, 'success');
+
+      // Recargar dropdown y dejar seleccionado
+      await this.cargarComboClientes(clienteCreado.nombre);
+      const select = document.getElementById('selectEntregador');
+      if (select) select.value = clienteCreado.nombre;
+
+      // Cerrar modal
+      document.getElementById('modalQuickCliente').classList.remove('show');
+      document.getElementById('formQuickCliente').reset();
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      if (btnSubmit) btnSubmit.disabled = false;
+    }
   },
 
   resetFechas() {
@@ -103,8 +196,17 @@ const IngresoModule = {
   async handleSubmit(e) {
     e.preventDefault();
     if (this.isSubmitting) return;
-    this.isSubmitting = true;
 
+    const selectEntregador = document.getElementById('selectEntregador');
+    const entregador = selectEntregador ? selectEntregador.value.trim() : '';
+
+    if (!entregador || entregador === '__NUEVO__') {
+      showToast('Debe seleccionar o registrar un cliente entregador.', 'error');
+      if (selectEntregador) selectEntregador.focus();
+      return;
+    }
+
+    this.isSubmitting = true;
     const btnSubmit = document.getElementById('btnSubmitCheque');
     if (btnSubmit) {
       btnSubmit.disabled = true;
@@ -120,7 +222,7 @@ const IngresoModule = {
         numero: document.getElementById('inputNumeroCheque').value.trim(),
         banco: banco,
         emisor: document.getElementById('inputEmisor').value.trim(),
-        entregador: document.getElementById('inputEntregador').value.trim(),
+        entregador: entregador,
         fecha_recepcion: document.getElementById('inputFechaRecepcion').value,
         fecha_cobro: document.getElementById('inputFechaCobro').value,
         importe: parseFloat(document.getElementById('inputImporte').value),

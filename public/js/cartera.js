@@ -337,17 +337,5 @@ const CarteraModule = {
     } catch (e) {
       showToast(e.message, 'error');
     }
-  },
-
-  async limpiarDuplicados() {
-    if (confirm('¿Desea buscar y eliminar cheques duplicados que tengan el mismo número, banco e importe en estado Pendiente?')) {
-      try {
-        const res = await API.post('/cheques/limpiar-duplicados');
-        showToast(res.mensaje, 'success');
-        this.cargarCheques();
-      } catch (error) {
-        showToast(error.message, 'error');
-      }
-    }
   }
 };

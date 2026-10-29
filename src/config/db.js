@@ -98,6 +98,30 @@ async function initDB() {
     `);
 
     await pool.query(`
+      CREATE TABLE IF NOT EXISTS clientes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(150) NOT NULL UNIQUE,
+        telefono VARCHAR(50) NULL,
+        email VARCHAR(150) NULL,
+        cuit VARCHAR(30) NULL,
+        notas TEXT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Sincronizar clientes ya existentes en cheques si los hubiera
+    try {
+      await pool.query(`
+        INSERT IGNORE INTO clientes (nombre)
+        SELECT DISTINCT TRIM(entregador) 
+        FROM cheques 
+        WHERE entregador IS NOT NULL AND TRIM(entregador) != '';
+      `);
+    } catch (eBackfill) {
+      // Ignorar si ya están o no hay datos
+    }
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS entregas (
         id INT AUTO_INCREMENT PRIMARY KEY,
         cheque_id INT NOT NULL,

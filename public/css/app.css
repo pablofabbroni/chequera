@@ -458,11 +458,11 @@ body::before {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* Metric / Stat Cards */
+/* Metric / Stat Cards (5 Indicadores en 1 Sola Línea en Escritorio) */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
   margin-bottom: 24px;
   width: 100%;
 }
@@ -471,44 +471,53 @@ body::before {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 18px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   transition: var(--transition);
   min-width: 0;
+  cursor: pointer;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-glow);
-  border-color: rgba(14, 165, 233, 0.3);
+  border-color: rgba(14, 165, 233, 0.4);
 }
 
 .stat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .stat-title {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.stat-icon svg {
+  width: 17px;
+  height: 17px;
 }
 
 .stat-icon.primary { background: rgba(14, 165, 233, 0.15); color: var(--primary); }
@@ -519,7 +528,7 @@ body::before {
 
 .stat-value {
   font-family: 'Outfit', sans-serif;
-  font-size: 1.65rem;
+  font-size: clamp(1.15rem, 1.4vw, 1.45rem);
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.5px;
@@ -530,12 +539,14 @@ body::before {
 }
 
 .stat-subtitle {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--text-dim);
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-badge {

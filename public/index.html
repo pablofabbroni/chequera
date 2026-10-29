@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
-  <link rel="stylesheet" href="/css/app.css?v=2.3.0">
+  <link rel="stylesheet" href="/css/app.css?v=2.4.0">
 </head>
 <body>
 
@@ -98,6 +98,11 @@
         <a href="#entregados" class="nav-item">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           <span>Entregados (Salidas)</span>
+        </a>
+
+        <a href="#clientes" class="nav-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Clientes</span>
         </a>
       </nav>
 
@@ -206,8 +211,6 @@
             <div class="filter-group">
               <select id="dashFiltroAnio" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
                 <option value="">Todo el historial</option>
-                <option value="2026" selected>Año 2026</option>
-                <option value="2025">Año 2025</option>
               </select>
               <select id="dashFiltroMes" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
                 <option value="">Todos los meses</option>
@@ -224,104 +227,121 @@
                 <option value="11">Noviembre</option>
                 <option value="12">Diciembre</option>
               </select>
+              <select id="dashFiltroEstado" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
+                <option value="">Filtrar por estado...</option>
+                <option value="Pendiente">Ir a Pendientes (Stock)</option>
+                <option value="Cobrado">Ir a Cobrados</option>
+                <option value="Rechazado">Ir a Rechazados</option>
+              </select>
             </div>
           </div>
 
-          <!-- Grid de Métricas Principales -->
+          <!-- Grid de Métricas Principales (5 Indicadores en 1 sola línea) -->
           <div class="stats-grid">
             <!-- Ganancia Neta -->
-            <div class="stat-card" style="border-color: rgba(16, 185, 129, 0.35);">
+            <div class="stat-card" style="border-color: rgba(16, 185, 129, 0.4);" title="Ganancia total neta obtenida por intereses descontados">
               <div class="stat-header">
                 <span class="stat-title">Ganancia Neta (Intereses)</span>
                 <div class="stat-icon emerald">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
               </div>
               <div class="stat-value" id="kpiGananciasNetas" style="color: var(--accent-emerald);">$ 0,00</div>
-              <div class="stat-subtitle">
-                <span class="stat-badge positive" id="kpiTasaPromedio">0% tasa prom.</span>
-                <span>utilidad bruta por descuento</span>
-              </div>
+              <div class="stat-subtitle" style="color: var(--accent-emerald); font-weight: 600;">Utilidad acumulada</div>
             </div>
 
             <!-- Cartera Pendiente -->
-            <div class="stat-card">
+            <div class="stat-card" onclick="App.irACarteraConFiltro('Pendiente')" title="Haga clic para ver los cheques pendientes en Cartera">
               <div class="stat-header">
                 <span class="stat-title">Cartera (Por Cobrar)</span>
                 <div class="stat-icon amber">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
               </div>
               <div class="stat-value" id="kpiCarteraImporte">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiCarteraCantidad">0 cheques por cobrar</div>
+              <div class="stat-subtitle" id="kpiCarteraCantidad">0 cheques por cobrar ↗</div>
             </div>
 
             <!-- Cobrados -->
-            <div class="stat-card">
+            <div class="stat-card" onclick="App.irACarteraConFiltro('Cobrado')" title="Haga clic para ver los cheques cobrados">
               <div class="stat-header">
                 <span class="stat-title">Cheques Cobrados</span>
                 <div class="stat-icon primary">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
               </div>
               <div class="stat-value" id="kpiCobradosImporte">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiCobradosCantidad">0 cobrados con éxito</div>
+              <div class="stat-subtitle" id="kpiCobradosCantidad">0 cobrados con éxito ↗</div>
             </div>
 
             <!-- Entregados (Salidas de caja) -->
-            <div class="stat-card">
+            <div class="stat-card" onclick="window.location.hash = '#entregados'" title="Haga clic para ver cheques entregados a terceros">
               <div class="stat-header">
-                <span class="stat-title">Entregados (Proveedores)</span>
+                <span class="stat-title">Entregados (Salidas)</span>
                 <div class="stat-icon indigo">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </div>
               </div>
               <div class="stat-value" id="kpiEntregadosImporte">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiEntregadosCantidad">0 cheques transferidos</div>
+              <div class="stat-subtitle" id="kpiEntregadosCantidad">0 cheques transferidos ↗</div>
             </div>
 
             <!-- Rechazados -->
-            <div class="stat-card">
+            <div class="stat-card" onclick="App.irACarteraConFiltro('Rechazado')" title="Haga clic para ver cheques rechazados">
               <div class="stat-header">
                 <span class="stat-title">Cheques Rechazados</span>
                 <div class="stat-icon rose">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 </div>
               </div>
               <div class="stat-value" id="kpiRechazadosImporte" style="color: var(--accent-rose);">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiRechazadosCantidad">0 cheques con rebote</div>
+              <div class="stat-subtitle" id="kpiRechazadosCantidad">0 cheques con rebote ↗</div>
             </div>
           </div>
 
-          <!-- Gráficos Interactivos -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; margin-bottom: 28px;">
-            <!-- Evolución Mensual -->
-            <div class="glass-card">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-                <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff;">Evolución de Ingresos y Ganancias</h3>
-                <span style="font-size: 0.78rem; color: var(--text-dim);">Últimos 12 meses</span>
-              </div>
-              <div style="height: 280px; position: relative;">
-                <canvas id="chartEvolucionMensual"></canvas>
-              </div>
-            </div>
-
+          <!-- Gráficos Interactivos: Flujo de Cobros Proyectado (Cash Flow) + Distribución Bancos -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 28px;">
             <!-- Proyección de Cobros (Cash Flow) -->
             <div class="glass-card">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;">
-                <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff;">Flujo de Cobros Proyectado (Cash Flow)</h3>
-                <span style="font-size: 0.78rem; color: var(--text-dim);">Vencimientos futuros</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                  <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    📈 Flujo de Cobros Proyectado (Cash Flow)
+                  </h3>
+                  <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
+                    Muestra el dinero a cobrar según la fecha de cobro de los cheques en cartera pendientes. Haga clic en un mes para ver cheques.
+                  </p>
+                </div>
+                <span class="badge-status pendiente" style="font-size: 0.75rem;">Liquidez futura</span>
               </div>
-              <div style="height: 280px; position: relative;">
+              <div style="height: 260px; position: relative;">
                 <canvas id="chartProyeccionCobros"></canvas>
               </div>
             </div>
+
+            <!-- Distribución por Banco -->
+            <div class="glass-card">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <div>
+                  <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff;">
+                    Distribución por Banco
+                  </h3>
+                  <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
+                    Concentración de fondos por entidad emisora (clic para filtrar en Cartera).
+                  </p>
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-dim);">Entidades</span>
+              </div>
+              <div style="height: 240px; position: relative;">
+                <canvas id="chartDistribucionBancos"></canvas>
+              </div>
+            </div>
           </div>
 
-          <!-- Fila Inferior: Alertas Urgentes + Top Bancos + Top Clientes -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
+          <!-- Fila Inferior: Alertas Urgentes + Top Clientes -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;">
             <!-- Cheques con Alerta Inmediata -->
-            <div class="glass-card" style="grid-column: span 1;">
+            <div class="glass-card">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                 <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
                   <span style="color: var(--accent-rose);">⚠️</span> Cheques que Requieren Atención
@@ -332,21 +352,16 @@
               </div>
             </div>
 
-            <!-- Distribución por Banco -->
-            <div class="glass-card">
-              <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 16px;">
-                Distribución por Banco
-              </h3>
-              <div style="height: 200px; position: relative;">
-                <canvas id="chartDistribucionBancos"></canvas>
-              </div>
-            </div>
-
             <!-- Top Entregadores (Quien genera más utilidad) -->
             <div class="glass-card">
-              <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff; margin-bottom: 16px;">
-                Top Clientes (Mayor Ganancia)
-              </h3>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff;">
+                  Top Clientes (Mayor Ganancia)
+                </h3>
+                <a href="#clientes" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">
+                  Ver Directorio ↗
+                </a>
+              </div>
               <div class="table-responsive">
                 <table class="custom-table" style="font-size: 0.82rem;">
                   <thead>
@@ -417,10 +432,18 @@
                   <input type="text" id="inputEmisor" class="form-control" placeholder="Titular de la cuenta / Empresa" required>
                 </div>
 
-                <!-- Entregador -->
+                <!-- Entregador del Cheque (Cliente) con creación rápida -->
                 <div class="form-group">
-                  <label class="form-label" for="inputEntregador">Entregador del Cheque (Cliente) *</label>
-                  <input type="text" id="inputEntregador" class="form-control" placeholder="Persona o cliente que trae el cheque" required>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                    <label class="form-label" for="selectEntregador" style="margin-bottom: 0;">Entregador del Cheque (Cliente) *</label>
+                    <button type="button" id="btnNuevoClienteRapido" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.74rem; color: var(--primary); border-color: rgba(14, 165, 233, 0.4);" title="Registrar un cliente nuevo sin salir del formulario">
+                      + Cargar nuevo
+                    </button>
+                  </div>
+                  <select id="selectEntregador" class="form-control" required>
+                    <option value="">-- Seleccionar cliente registrado --</option>
+                    <option value="__NUEVO__" style="color: var(--primary); font-weight: 700;">+ Cargar nuevo cliente...</option>
+                  </select>
                 </div>
 
                 <!-- Fecha Recepción -->
@@ -535,12 +558,6 @@
                   <input type="checkbox" id="checkSoloAlertas">
                   <span>Solo con alerta</span>
                 </label>
-
-                <!-- Limpiar Duplicados -->
-                <button type="button" class="btn btn-secondary btn-sm" onclick="CarteraModule.limpiarDuplicados()" title="Eliminar cheques duplicados en cartera">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  <span>Limpiar Duplicados</span>
-                </button>
 
                 <!-- Exportar Excel -->
                 <button id="btnExportarExcel" class="btn btn-secondary btn-sm" title="Descargar reporte en formato Excel">
@@ -669,6 +686,88 @@
             </div>
 
           </div>
+        <!-- ======================================================== -->
+        <!-- PÁGINA 5: DIRECTORIO DE CLIENTES (Entregadores) -->
+        <!-- ======================================================== -->
+        <section id="pageClientes" class="page-view" style="display: none;">
+          <div class="glass-card">
+            
+            <!-- Barra Superior y Contadores -->
+            <div class="filter-bar">
+              <div>
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; color: #fff;">
+                  Directorio de Clientes (Entregadores)
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
+                  Base de clientes que operan y descuentan cheques en la empresa.
+                </p>
+              </div>
+
+              <div class="filter-group">
+                <!-- Buscador -->
+                <div class="search-input-wrapper">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" id="searchClientes" class="form-control" placeholder="Buscar por nombre, CUIT, teléfono...">
+                </div>
+
+                <button id="btnNuevoClienteTab" class="btn btn-primary btn-sm">
+                  + Registrar Cliente
+                </button>
+              </div>
+            </div>
+
+            <!-- Resumen de Clientes -->
+            <div class="entregados-summary-box">
+              <div class="summary-col">
+                <span class="summary-label">Total Clientes Registrados</span>
+                <div id="resumenTotalClientes" class="summary-val-white">0 clientes</div>
+              </div>
+              <div class="summary-col border-left">
+                <span class="summary-label">Volumen Total Operado</span>
+                <div id="resumenVolumenClientes" class="summary-val-white">$ 0,00</div>
+              </div>
+              <div class="summary-col border-left">
+                <span class="summary-label">Ganancia Total Generada</span>
+                <div id="resumenGananciaClientes" class="summary-val-blue" style="color: var(--accent-emerald);">$ 0,00</div>
+              </div>
+            </div>
+
+            <!-- Tabla de Clientes (Escritorio) -->
+            <div class="table-responsive desktop-table-view">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th style="width: 26%;">Cliente / CUIT</th>
+                    <th style="width: 22%;">Contacto</th>
+                    <th style="width: 16%;">Cheques</th>
+                    <th style="width: 22%;">Volumen y Ganancia</th>
+                    <th style="width: 14%;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaClientesBody">
+                  <!-- Inyectado dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Tarjetas de Clientes (Móvil) -->
+            <div id="clientesMobileCards" class="mobile-cards-view">
+              <!-- Inyectado dinámicamente en móviles -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="clientesEmptyState" style="display: none; text-align: center; padding: 48px 20px;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-dim); margin-bottom: 12px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <h3 style="color: #fff; font-size: 1.1rem; font-weight: 600;">No se encontraron clientes</h3>
+              <p style="color: var(--text-muted); font-size: 0.88rem; margin: 6px 0 16px;">
+                No hay clientes registrados o que coincidan con la búsqueda.
+              </p>
+              <button class="btn btn-primary btn-sm" onclick="ClientesModule.abrirModalNuevo()">
+                + Registrar primer cliente
+              </button>
+            </div>
+
+          </div>
         </section>
 
       </main>
@@ -692,7 +791,12 @@
 
       <a href="#entregados" class="mobile-nav-item">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        <span>Entregados</span>
+        <span>Entregas</span>
+      </a>
+
+      <a href="#clientes" class="mobile-nav-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Clientes</span>
       </a>
     </nav>
 
@@ -761,16 +865,116 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
+  <!-- MODAL: REGISTRO RÁPIDO DE CLIENTE (En Ingreso) -->
+  <!-- ========================================== -->
+  <div id="modalQuickCliente" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">+ Nuevo Cliente (Entregador)</h3>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalQuickCliente').classList.remove('show')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form id="formQuickCliente">
+        <div class="modal-body">
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">
+            El cliente se registrará en el sistema y quedará seleccionado automáticamente en el formulario del cheque.
+          </p>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="quickClienteNombre">Nombre y Apellido / Razón Social *</label>
+            <input type="text" id="quickClienteNombre" class="form-control" placeholder="Ej: Ricardo Rubén" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="quickClienteTelefono">Teléfono de Contacto (opcional)</label>
+            <input type="text" id="quickClienteTelefono" class="form-control" placeholder="Ej: +54 9 11 2345-6789">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="quickClienteCuit">CUIT / DNI (opcional)</label>
+            <input type="text" id="quickClienteCuit" class="form-control" placeholder="Ej: 20-33445566-7">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalQuickCliente').classList.remove('show')">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Guardar y Seleccionar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: GESTIÓN DE CLIENTE (Pestaña Clientes) -->
+  <!-- ========================================== -->
+  <div id="modalClienteGlobal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="modalClienteTitulo" style="color: #fff; font-size: 1.15rem; font-weight: 700;">Cliente</h3>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalClienteGlobal').classList.remove('show')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form id="formModalCliente">
+        <input type="hidden" id="inputClienteId">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="inputClienteNombre">Nombre y Apellido / Razón Social *</label>
+            <input type="text" id="inputClienteNombre" class="form-control" placeholder="Ej: Ricardo Rubén" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="inputClienteTelefono">Teléfono de Contacto</label>
+            <input type="text" id="inputClienteTelefono" class="form-control" placeholder="Ej: +54 9 11 2345-6789">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="inputClienteEmail">Correo Electrónico</label>
+            <input type="email" id="inputClienteEmail" class="form-control" placeholder="cliente@correo.com">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="inputClienteCuit">CUIT / DNI</label>
+            <input type="text" id="inputClienteCuit" class="form-control" placeholder="Ej: 20-33445566-7">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputClienteNotas">Notas / Observaciones</label>
+            <textarea id="inputClienteNotas" class="form-control" rows="2" placeholder="Información comercial relevante..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('modalClienteGlobal').classList.remove('show')">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Guardar Cliente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=2.3.0"></script>
-  <script src="/js/notifications.js?v=2.3.0"></script>
-  <script src="/js/dashboard.js?v=2.3.0"></script>
-  <script src="/js/ingreso.js?v=2.3.0"></script>
-  <script src="/js/cartera.js?v=2.3.0"></script>
-  <script src="/js/entregados.js?v=2.3.0"></script>
-  <script src="/js/app.js?v=2.3.0"></script>
+  <script src="/js/api.js?v=2.4.0"></script>
+  <script src="/js/notifications.js?v=2.4.0"></script>
+  <script src="/js/dashboard.js?v=2.4.0"></script>
+  <script src="/js/ingreso.js?v=2.4.0"></script>
+  <script src="/js/cartera.js?v=2.4.0"></script>
+  <script src="/js/entregados.js?v=2.4.0"></script>
+  <script src="/js/clientes.js?v=2.4.0"></script>
+  <script src="/js/app.js?v=2.4.0"></script>
 </body>
 </html>
