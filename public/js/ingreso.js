@@ -1,28 +1,26 @@
 // Módulo de Ingreso de Cheques con Cálculos Financieros Reactivos
 
 const IngresoModule = {
+  initialized: false,
+  isSubmitting: false,
+
   init() {
+    this.resetFechas();
+
+    if (this.initialized) {
+      this.calcularEnVivo();
+      return;
+    }
+    this.initialized = true;
+
     const form = document.getElementById('formIngresoCheque');
     if (!form) return;
-
-    // Configurar fechas por defecto (Recepción: Hoy, Cobro: 30 días adelante)
-    const hoy = new Date().toISOString().split('T')[0];
-    const fechaRecepInput = document.getElementById('inputFechaRecepcion');
-    const fechaCobroInput = document.getElementById('inputFechaCobro');
-
-    if (fechaRecepInput && !fechaRecepInput.value) {
-      fechaRecepInput.value = hoy;
-    }
-
-    if (fechaCobroInput && !fechaCobroInput.value) {
-      const fechaFutura = new Date();
-      fechaFutura.setDate(fechaFutura.getDate() + 30);
-      fechaCobroInput.value = fechaFutura.toISOString().split('T')[0];
-    }
 
     // Escuchar cambios reactivos para calcular en vivo
     const importeInput = document.getElementById('inputImporte');
     const tasaInput = document.getElementById('inputTasa');
+    const fechaRecepInput = document.getElementById('inputFechaRecepcion');
+    const fechaCobroInput = document.getElementById('inputFechaCobro');
 
     if (importeInput) importeInput.addEventListener('input', () => this.calcularEnVivo());
     if (tasaInput) tasaInput.addEventListener('input', () => this.calcularEnVivo());
@@ -45,11 +43,27 @@ const IngresoModule = {
       });
     }
 
-    // Manejar envío del formulario
-    form.addEventListener('submit', (e) => this.handleSubmit(e));
+    // Único listener de envío de formulario para evitar duplicados
+    form.onsubmit = (e) => this.handleSubmit(e);
 
     // Ejecutar cálculo inicial
     this.calcularEnVivo();
+  },
+
+  resetFechas() {
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaRecepInput = document.getElementById('inputFechaRecepcion');
+    const fechaCobroInput = document.getElementById('inputFechaCobro');
+
+    if (fechaRecepInput && !fechaRecepInput.value) {
+      fechaRecepInput.value = hoy;
+    }
+
+    if (fechaCobroInput && !fechaCobroInput.value) {
+      const fechaFutura = new Date();
+      fechaFutura.setDate(fechaFutura.getDate() + 30);
+      fechaCobroInput.value = fechaFutura.toISOString().split('T')[0];
+    }
   },
 
   calcularEnVivo() {
@@ -88,10 +102,13 @@ const IngresoModule = {
 
   async handleSubmit(e) {
     e.preventDefault();
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
     const btnSubmit = document.getElementById('btnSubmitCheque');
     if (btnSubmit) {
       btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<span>Guardando...</span>';
+      btnSubmit.innerHTML = '<span>Guardando cheque...</span>';
     }
 
     try {
@@ -114,15 +131,17 @@ const IngresoModule = {
       const res = await API.post('/cheques', payload);
       showToast(res.mensaje || 'Cheque ingresado correctamente a la Cartera.', 'success');
 
-      // Limpiar formulario y resetear a estado inicial
+      // Limpiar formulario y resetear valores
       document.getElementById('formIngresoCheque').reset();
-      this.init();
+      this.resetFechas();
+      this.calcularEnVivo();
 
       // Redirigir a Cartera
       window.location.hash = '#cartera';
     } catch (error) {
       showToast(error.message, 'error');
     } finally {
+      this.isSubmitting = false;
       if (btnSubmit) {
         btnSubmit.disabled = false;
         btnSubmit.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> <span>Ingresar Cheque a Cartera</span>';

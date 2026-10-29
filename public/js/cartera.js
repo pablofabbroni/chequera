@@ -2,6 +2,7 @@
 
 const CarteraModule = {
   cheques: [],
+  initialized: false,
   filtroActual: {
     estado: 'Pendiente',
     search: '',
@@ -9,7 +10,10 @@ const CarteraModule = {
   },
 
   init() {
-    this.bindEvents();
+    if (!this.initialized) {
+      this.bindEvents();
+      this.initialized = true;
+    }
     this.cargarCheques();
   },
 
@@ -59,15 +63,25 @@ const CarteraModule = {
 
   async cargarCheques() {
     const tableBody = document.getElementById('tablaCarteraBody');
-    if (!tableBody) return;
+    const mobileCards = document.getElementById('carteraMobileCards');
 
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-dim);">
-          Cargando cheques de la cartera...
-        </td>
-      </tr>
-    `;
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-dim);">
+            Cargando cheques de cartera...
+          </td>
+        </tr>
+      `;
+    }
+
+    if (mobileCards) {
+      mobileCards.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: var(--text-dim);">
+          Cargando cheques...
+        </div>
+      `;
+    }
 
     try {
       const queryParams = new URLSearchParams({
@@ -81,13 +95,15 @@ const CarteraModule = {
       this.renderTabla();
       this.actualizarContadores();
     } catch (error) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="9" style="text-align: center; padding: 30px; color: var(--accent-rose);">
-            Error al cargar cartera: ${error.message}
-          </td>
-        </tr>
-      `;
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 30px; color: var(--accent-rose);">
+              Error al cargar cartera: ${error.message}
+            </td>
+          </tr>
+        `;
+      }
     }
   },
 
@@ -115,16 +131,16 @@ const CarteraModule = {
 
     if (emptyState) emptyState.style.display = 'none';
 
-    // 1. Renderizar Tabla para Escritorio
+    // 1. Renderizado de Tabla Compacta para Escritorio (5 Columnas Optimizadas sin Scroll)
     if (tableBody) {
       tableBody.innerHTML = this.cheques.map(c => {
         const met = c.metricas || {};
         let alertaBadge = '';
         if (c.estado === 'Pendiente') {
           if (met.nivelAlerta === 'POR_VENCER_LEGAL') {
-            alertaBadge = `<div class="tag-urgente critico" title="${met.mensajeAlerta}">¡Vence en ${met.diasParaVencLegal}d!</div>`;
+            alertaBadge = `<div class="tag-urgente critico">⚠️ Vence en ${met.diasParaVencLegal}d</div>`;
           } else if (met.nivelAlerta === 'COBRO_CERCANO' || met.nivelAlerta === 'LISTO_COBRO') {
-            alertaBadge = `<div class="tag-urgente aviso" title="${met.mensajeAlerta}">Cobro en ${met.diasParaCobro}d</div>`;
+            alertaBadge = `<div class="tag-urgente aviso">Cobro en ${met.diasParaCobro}d</div>`;
           } else if (met.nivelAlerta === 'VENCIDO') {
             alertaBadge = `<div class="tag-urgente critico">Vencido Legal</div>`;
           }
@@ -134,57 +150,69 @@ const CarteraModule = {
 
         return `
           <tr>
+            <!-- Columna 1: Cheque y Banco -->
             <td>
-              <div style="font-weight: 700; color: #fff;">#${c.numero}</div>
-              <div style="font-size: 0.78rem; color: var(--text-dim);">${formatFecha(c.fecha_recepcion)}</div>
+              <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">#${c.numero}</div>
+              <div style="font-size: 0.82rem; color: var(--primary); font-weight: 600;">${c.banco}</div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">Recepción: ${formatFecha(c.fecha_recepcion)}</div>
             </td>
-            <td><span style="font-weight: 600; color: #e2e8f0;">${c.banco}</span></td>
+
+            <!-- Columna 2: Emisor y Entregador -->
             <td>
-              <div style="font-weight: 500;">${c.emisor}</div>
-              <div style="font-size: 0.78rem; color: var(--text-dim);">Entregó: ${c.entregador}</div>
+              <div style="font-weight: 600; color: #fff;">${c.emisor}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Entregó: <span style="color: #e2e8f0;">${c.entregador}</span></div>
             </td>
+
+            <!-- Columna 3: Fecha Cobro y Alerta -->
             <td>
-              <div style="font-weight: 600; color: #fff;">${formatFecha(c.fecha_cobro)}</div>
+              <div style="font-weight: 700; color: #fff;">${formatFecha(c.fecha_cobro)}</div>
               ${alertaBadge}
+              <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">Vence legal: ${met.fechaVencimientoLegal || '-'}</div>
             </td>
+
+            <!-- Columna 4: Importe y Rendimiento -->
             <td>
-              <div style="font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 0.98rem; color: #fff;">
+              <div style="font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 1.05rem; color: #fff;">
                 ${formatARS(c.importe)}
               </div>
-            </td>
-            <td>
-              <span style="background: rgba(14, 165, 233, 0.12); color: var(--primary); padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-                ${c.tasa_interes}%
-              </span>
-            </td>
-            <td>
-              <div style="font-weight: 600; color: var(--accent-emerald);">${formatARS(c.interes_cobrado)}</div>
-              <div style="font-size: 0.75rem; color: var(--text-dim);">Saliente: ${formatARS(c.dinero_saliente)}</div>
-            </td>
-            <td>
-              <span class="badge-status ${estadoClass}">● ${c.estado}</span>
-              ${c.motivo_rechazo ? `<div style="font-size: 0.72rem; color: var(--accent-rose); margin-top: 4px;">Motivo: ${c.motivo_rechazo}</div>` : ''}
-            </td>
-            <td>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                ${c.estado === 'Pendiente' ? `
-                  <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" title="Marcar como Cobrado">Cobrar</button>
-                  <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" title="Marcar como Rechazado">Rechazar</button>
-                  <button class="btn btn-secondary btn-sm" onclick="CarteraModule.abrirEntregar(${c.id})" title="Entregar Cheque a Tercero">Entregar</button>
-                ` : `
-                  <button class="btn btn-secondary btn-sm" onclick="CarteraModule.verDetalle(${c.id})">Ver</button>
-                `}
-                <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar Cheque" style="color: var(--accent-rose);">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
+              <div style="font-size: 0.78rem; color: var(--accent-emerald); font-weight: 600;">
+                +${formatARS(c.interes_cobrado)} (${c.tasa_interes}%)
               </div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">
+                Saliente: ${formatARS(c.dinero_saliente)}
+              </div>
+            </td>
+
+            <!-- Columna 5: Acciones (ÚNICAS 2 OPCIONES: Cobrado y Rechazado) -->
+            <td>
+              ${c.estado === 'Pendiente' ? `
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" title="Marcar como Cobrado">
+                    Cobrado
+                  </button>
+                  <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" title="Marcar como Rechazado">
+                    Rechazado
+                  </button>
+                  <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); width: 28px; height: 28px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              ` : `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge-status ${estadoClass}">● ${c.estado}</span>
+                  ${c.motivo_rechazo ? `<div style="font-size: 0.72rem; color: var(--accent-rose);">Motivo: ${c.motivo_rechazo}</div>` : ''}
+                  <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); width: 28px; height: 28px; margin-left: auto;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              `}
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    // 2. Renderizar Tarjetas para Móviles
+    // 2. Renderizado de Tarjetas Nativas para Móviles (100% Responsive)
     if (mobileCards) {
       mobileCards.innerHTML = this.cheques.map(c => {
         const met = c.metricas || {};
@@ -233,18 +261,28 @@ const CarteraModule = {
 
             ${c.motivo_rechazo ? `<div style="font-size: 0.75rem; color: var(--accent-rose); background: rgba(244,63,94,0.1); padding: 4px 8px; border-radius: 4px;">Motivo: ${c.motivo_rechazo}</div>` : ''}
 
-            <div class="card-actions-row">
-              ${c.estado === 'Pendiente' ? `
-                <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')">Cobrar</button>
-                <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')">Rechazar</button>
-                <button class="btn btn-secondary btn-sm" onclick="CarteraModule.abrirEntregar(${c.id})">Entregar</button>
-              ` : `
-                <button class="btn btn-secondary btn-sm" onclick="CarteraModule.verDetalle(${c.id})">Ver</button>
-              `}
-              <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); margin-left: auto;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
-            </div>
+            ${c.estado === 'Pendiente' ? `
+              <div class="card-actions-row">
+                <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+                  Cobrado
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+                  Rechazado
+                </button>
+                <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose);">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            ` : `
+              <div class="card-actions-row">
+                <button class="btn btn-secondary btn-sm" onclick="CarteraModule.verDetalle(${c.id})" style="flex: 1;">
+                  Ver Detalle
+                </button>
+                <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose);">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            `}
           </div>
         `;
       }).join('');
@@ -253,7 +291,7 @@ const CarteraModule = {
 
   // Modal para Marcar como Cobrado
   modalCobrar(id, numero) {
-    if (confirm(`¿Confirma que el Cheque N° ${numero} ha sido COBRADO exitosamente?`)) {
+    if (confirm(`¿Confirma cambiar estado a COBRADO para el Cheque N° ${numero}?`)) {
       this.ejecutarCambioEstado(id, 'Cobrado');
     }
   },
@@ -279,14 +317,6 @@ const CarteraModule = {
     }
   },
 
-  abrirEntregar(id) {
-    // Redirige al módulo entregados y preselecciona el cheque
-    window.location.hash = '#entregados';
-    setTimeout(() => {
-      EntregadosModule.abrirModalEntregaConCheque(id);
-    }, 150);
-  },
-
   async eliminarCheque(id, numero) {
     if (confirm(`¿Está seguro de eliminar el Cheque N° ${numero}? Esta acción no se puede deshacer.`)) {
       try {
@@ -306,6 +336,18 @@ const CarteraModule = {
       alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés: ${formatARS(ch.interes_cobrado)}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
     } catch (e) {
       showToast(e.message, 'error');
+    }
+  },
+
+  async limpiarDuplicados() {
+    if (confirm('¿Desea buscar y eliminar cheques duplicados que tengan el mismo número, banco e importe en estado Pendiente?')) {
+      try {
+        const res = await API.post('/cheques/limpiar-duplicados');
+        showToast(res.mensaje, 'success');
+        this.cargarCheques();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
     }
   }
 };

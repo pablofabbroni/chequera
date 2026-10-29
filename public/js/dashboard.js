@@ -4,9 +4,13 @@ const DashboardModule = {
   chartEvolucion: null,
   chartProyeccion: null,
   chartBancos: null,
+  initialized: false,
 
   init() {
-    this.bindEvents();
+    if (!this.initialized) {
+      this.bindEvents();
+      this.initialized = true;
+    }
     this.cargarMetricas();
   },
 

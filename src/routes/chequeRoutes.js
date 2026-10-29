@@ -8,6 +8,7 @@ router.use(requireAuth);
 router.post('/', chequeController.crearCheque);
 router.get('/', chequeController.obtenerCartera);
 router.get('/exportar/excel', chequeController.exportarExcel);
+router.post('/limpiar-duplicados', chequeController.limpiarDuplicados);
 router.get('/:id', chequeController.obtenerChequePorId);
 router.put('/:id', chequeController.actualizarCheque);
 router.patch('/:id/estado', chequeController.cambiarEstado);

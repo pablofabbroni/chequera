@@ -752,6 +752,10 @@ body::before {
   width: 100%;
 }
 
+.filter-bar > div:first-child {
+  min-width: 0;
+}
+
 .filter-group {
   display: flex;
   align-items: center;
@@ -780,14 +784,16 @@ body::before {
 /* Tables & Portfolio (Desktop View) */
 .table-responsive {
   width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  overflow: hidden;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
+  box-sizing: border-box;
 }
 
 .custom-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
 }
@@ -795,21 +801,25 @@ body::before {
 .custom-table th {
   background: rgba(13, 18, 31, 0.95);
   color: var(--text-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.76rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 13px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-subtle);
-  white-space: nowrap;
+  white-space: normal;
+  overflow: hidden;
 }
 
 .custom-table td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   font-size: 0.85rem;
   color: var(--text-main);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  white-space: nowrap;
+  vertical-align: middle;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 .custom-table tr:hover td {
@@ -1061,7 +1071,10 @@ body::before {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
   overflow: hidden;
   animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1069,25 +1082,31 @@ body::before {
 }
 
 .modal-header {
-  padding: 18px 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  max-height: calc(90vh - 130px);
+  box-sizing: border-box;
 }
 
 .modal-footer {
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
   background: rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 /* Toast Notifications */
@@ -1216,15 +1235,25 @@ body::before {
   }
 }
 
-/* Mobile Screens (<= 767px) */
-@media (max-width: 767px) {
+/* Tablet & Mobile Screens (<= 991px) */
+@media (max-width: 991px) {
   .top-navbar {
-    padding: 8px 12px;
+    padding: 8px 14px;
     min-height: 54px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .page-headline {
+    flex: 1;
+    min-width: 0;
   }
 
   .page-headline h1 {
     font-size: 1.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .page-headline p {
@@ -1236,7 +1265,19 @@ body::before {
   }
 
   #btnActivarPush {
-    padding: 6px 9px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .alert-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .alert-banner .btn {
+    width: 100%;
+    text-align: center;
   }
 
   .content-body {
@@ -1267,7 +1308,7 @@ body::before {
   }
 
   .mobile-cards-view {
-    display: flex;
+    display: flex !important;
   }
 
   .filter-bar {
@@ -1318,9 +1359,11 @@ body::before {
 
   /* Entregados Summary Box */
   .entregados-summary-box {
+    display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 12px 14px;
+    padding: 14px 16px;
+    margin: 12px 0 16px;
   }
 
   .summary-col.border-left {

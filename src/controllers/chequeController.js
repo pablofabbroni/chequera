@@ -39,6 +39,19 @@ async function crearCheque(req, res) {
     const dineroSaliente = Math.round((numImporte - interesCobrado) * 100) / 100;
 
     const pool = getPool();
+
+    // Validar si ya existe un cheque con el mismo número y banco en Cartera Pendiente
+    const [existente] = await pool.query(
+      "SELECT id FROM cheques WHERE numero = ? AND banco = ? AND estado = 'Pendiente' LIMIT 1",
+      [numero.trim(), banco.trim()]
+    );
+
+    if (existente.length > 0) {
+      return res.status(400).json({ 
+        error: `El cheque N° ${numero.trim()} de ${banco.trim()} ya se encuentra registrado en Cartera como Pendiente.` 
+      });
+    }
+
     const [result] = await pool.query(
       `INSERT INTO cheques 
         (numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
@@ -330,6 +343,33 @@ async function exportarExcel(req, res) {
   }
 }
 
+/**
+ * Limpiar cheques duplicados existentes (mismo numero, banco y importe)
+ */
+async function limpiarDuplicados(req, res) {
+  try {
+    const pool = getPool();
+    const [result] = await pool.query(`
+      DELETE c1 FROM cheques c1
+      INNER JOIN cheques c2 
+      WHERE c1.id > c2.id 
+        AND c1.numero = c2.numero 
+        AND c1.banco = c2.banco 
+        AND c1.importe = c2.importe
+        AND c1.estado = 'Pendiente'
+        AND c2.estado = 'Pendiente';
+    `);
+
+    return res.json({
+      mensaje: `Se eliminaron ${result.affectedRows || 0} cheques duplicados exitosamente.`,
+      eliminados: result.affectedRows || 0
+    });
+  } catch (error) {
+    console.error('[LIMPIAR DUPLICADOS ERROR]', error);
+    return res.status(500).json({ error: 'Error al limpiar cheques duplicados.' });
+  }
+}
+
 module.exports = {
   crearCheque,
   obtenerCartera,
@@ -337,5 +377,6 @@ module.exports = {
   cambiarEstado,
   actualizarCheque,
   eliminarCheque,
-  exportarExcel
+  exportarExcel,
+  limpiarDuplicados
 };

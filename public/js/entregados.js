@@ -3,9 +3,13 @@
 const EntregadosModule = {
   entregados: [],
   chequesDisponibles: [],
+  initialized: false,
 
   init() {
-    this.bindEvents();
+    if (!this.initialized) {
+      this.bindEvents();
+      this.initialized = true;
+    }
     this.cargarEntregados();
   },
 
@@ -23,7 +27,7 @@ const EntregadosModule = {
 
     const formEntrega = document.getElementById('formEntregarCheque');
     if (formEntrega) {
-      formEntrega.addEventListener('submit', (e) => this.handleGuardarEntrega(e));
+      formEntrega.onsubmit = (e) => this.handleGuardarEntrega(e);
     }
 
     // Buscador
@@ -70,7 +74,17 @@ const EntregadosModule = {
 
   async cargarEntregados() {
     const tableBody = document.getElementById('tablaEntregadosBody');
-    if (!tableBody) return;
+    const mobileCards = document.getElementById('entregadosMobileCards');
+
+    if (tableBody) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-dim);">
+            Cargando cheques entregados...
+          </td>
+        </tr>
+      `;
+    }
 
     try {
       const res = await API.get('/entregas');
@@ -84,13 +98,15 @@ const EntregadosModule = {
 
       this.renderTabla(this.entregados);
     } catch (error) {
-      tableBody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align: center; padding: 30px; color: var(--accent-rose);">
-            Error al cargar cheques entregados: ${error.message}
-          </td>
-        </tr>
-      `;
+      if (tableBody) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 30px; color: var(--accent-rose);">
+              Error al cargar cheques entregados: ${error.message}
+            </td>
+          </tr>
+        `;
+      }
     }
   },
 
@@ -110,29 +126,38 @@ const EntregadosModule = {
 
     if (emptyState) emptyState.style.display = 'none';
 
-    // 1. Renderizar Tabla para Escritorio
+    // 1. Renderizar Tabla para Escritorio (5 Columnas Ajustadas)
     if (tableBody) {
       tableBody.innerHTML = lista.map(e => `
         <tr>
-          <td><div style="font-weight: 600; color: #fff;">${formatFecha(e.fecha_entrega)}</div></td>
+          <!-- Col 1: Fecha Entrega -->
+          <td>
+            <div style="font-weight: 700; color: #fff;">${formatFecha(e.fecha_entrega)}</div>
+            <div style="font-size: 0.72rem; color: var(--text-dim);">Salida de cartera</div>
+          </td>
+
+          <!-- Col 2: Cheque y Banco -->
           <td>
             <div style="font-weight: 700; color: #fff;">#${e.numero}</div>
-            <div style="font-size: 0.78rem; color: var(--text-dim);">${e.banco}</div>
+            <div style="font-size: 0.8rem; color: var(--primary); font-weight: 600;">${e.banco}</div>
+            <div style="font-size: 0.72rem; color: var(--text-dim);">Cobro: ${formatFecha(e.fecha_cobro)}</div>
           </td>
+
+          <!-- Col 3: Destinatario y Concepto -->
           <td>
-            <div style="font-weight: 600; color: var(--primary);">${e.destinatario}</div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);">${e.concepto || 'Sin concepto'}</div>
+            <div style="font-weight: 600; color: #fff;">${e.destinatario}</div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">${e.concepto || 'Sin concepto'}</div>
+            <div style="font-size: 0.72rem; color: var(--text-dim);">Emisor: ${e.emisor} | Entregó: ${e.entregador}</div>
           </td>
+
+          <!-- Col 4: Importe -->
           <td>
-            <div style="font-size: 0.85rem;">Emisor: ${e.emisor}</div>
-            <div style="font-size: 0.78rem; color: var(--text-dim);">Entregó: ${e.entregador}</div>
-          </td>
-          <td><span style="font-weight: 500;">${formatFecha(e.fecha_cobro)}</span></td>
-          <td>
-            <div style="font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 1rem; color: #fff;">
+            <div style="font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 1.05rem; color: #fff;">
               ${formatARS(e.importe)}
             </div>
           </td>
+
+          <!-- Col 5: Acción Revertir -->
           <td>
             <button class="btn btn-secondary btn-sm" onclick="EntregadosModule.revertir(${e.entrega_id})" title="Cancelar entrega y devolver a Cartera">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
@@ -143,7 +168,7 @@ const EntregadosModule = {
       `).join('');
     }
 
-    // 2. Renderizar Tarjetas para Móviles
+    // 2. Renderizar Tarjetas para Móviles (100% Responsive)
     if (mobileCards) {
       mobileCards.innerHTML = lista.map(e => `
         <div class="check-card-item status-entregado">
@@ -179,7 +204,7 @@ const EntregadosModule = {
           ` : ''}
 
           <div class="card-actions-row">
-            <button class="btn btn-secondary btn-sm" onclick="EntregadosModule.revertir(${e.entrega_id})" style="width: 100%;">
+            <button class="btn btn-secondary btn-sm" onclick="EntregadosModule.revertir(${e.entrega_id})" style="width: 100%; padding: 10px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
               Revertir Entrega a Cartera
             </button>
