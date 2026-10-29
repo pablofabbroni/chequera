@@ -130,9 +130,12 @@ const DashboardModule = {
     const vacioEl = document.getElementById('dashboardAlertasVacio');
     const banner = document.getElementById('dashboardUrgentBanner');
 
+    const mobileCards = document.getElementById('dashboardAlertasMobileCards');
+
     if (!chequesAlerta || chequesAlerta.length === 0) {
       if (banner) banner.style.display = 'none';
       if (tableBody) tableBody.innerHTML = '';
+      if (mobileCards) mobileCards.innerHTML = '';
       if (vacioEl) vacioEl.style.display = 'block';
       return;
     }
@@ -188,6 +191,59 @@ const DashboardModule = {
               ${badgeTag}
             </td>
           </tr>
+        `;
+      }).join('');
+    }
+
+    if (mobileCards) {
+      mobileCards.innerHTML = chequesAlerta.map(c => {
+        const met = c.metricas || {};
+        let alertaTag = '';
+        if (met.nivelAlerta === 'POR_VENCER_LEGAL') {
+          alertaTag = `<div class="tag-urgente critico" style="display: inline-flex;">⚠️ Vence legal en ${met.diasParaVencLegal}d</div>`;
+        } else if (met.nivelAlerta === 'COBRO_CERCANO' || met.nivelAlerta === 'LISTO_COBRO') {
+          alertaTag = `<div class="tag-urgente aviso" style="display: inline-flex;">📅 Cobro en ${met.diasParaCobro}d</div>`;
+        } else if (met.nivelAlerta === 'VENCIDO') {
+          alertaTag = `<div class="tag-urgente critico" style="display: inline-flex;">⛔ Vencido Legal</div>`;
+        }
+
+        return `
+          <div class="check-card-item status-pendiente">
+            <div class="card-row-top">
+              <div>
+                <span class="card-check-num">#${c.numero}</span>
+                <span class="card-bank-name">• ${c.banco}</span>
+              </div>
+              ${alertaTag}
+            </div>
+
+            <div class="card-amount-box">
+              <div>
+                <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); font-weight: 600;">Importe</div>
+                <div class="card-amount-main">${formatARS(c.importe)}</div>
+              </div>
+              <div class="card-amount-details">
+                <span style="color: var(--accent-emerald); font-weight: 700;">+${formatARS(c.interes_cobrado)}</span>
+                <span style="color: var(--text-dim); font-size: 0.72rem;">${c.tasa_interes}% tasa</span>
+              </div>
+            </div>
+
+            <div class="card-meta-grid">
+              <div>Emisor: <span class="val">${c.emisor}</span></div>
+              <div>Entregó: <span class="val">${c.entregador}</span></div>
+              <div>Cobro: <span class="val">${formatFecha(c.fecha_cobro)}</span></div>
+              <div>Venc. legal: <span class="val">${met.fechaVencimientoLegal || '-'}</span></div>
+            </div>
+
+            <div class="card-actions-row">
+              <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+                Cobrado
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+                Rechazado
+              </button>
+            </div>
+          </div>
         `;
       }).join('');
     }
@@ -284,28 +340,67 @@ const DashboardModule = {
 
   renderTopTablas(bancos, entregadores) {
     const tbodyEntregadores = document.getElementById('tablaTopEntregadoresBody');
-    if (tbodyEntregadores && entregadores) {
+    const mobileCards = document.getElementById('topClientesMobileCards');
+
+    if (entregadores) {
       if (entregadores.length === 0) {
-        tbodyEntregadores.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Sin registros de clientes</td></tr>`;
+        if (tbodyEntregadores) {
+          tbodyEntregadores.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Sin registros de clientes</td></tr>`;
+        }
+        if (mobileCards) {
+          mobileCards.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px;">Sin registros de clientes</div>`;
+        }
         return;
       }
 
-      tbodyEntregadores.innerHTML = entregadores.map(e => `
-        <tr>
-          <td style="font-weight: 600; color: #fff;">
-            ${e.entregador}
-          </td>
-          <td style="text-align: center; color: var(--text-muted); font-weight: 600;">
-            ${e.cantidad} cheques
-          </td>
-          <td style="text-align: right; font-weight: 600; color: #fff; font-family: 'Outfit', sans-serif;">
-            ${formatARS(e.total_importe || 0)}
-          </td>
-          <td style="text-align: right; font-weight: 700; color: var(--accent-emerald); font-family: 'Outfit', sans-serif;">
-            +${formatARS(e.ganancia_generada)}
-          </td>
-        </tr>
-      `).join('');
+      if (tbodyEntregadores) {
+        tbodyEntregadores.innerHTML = entregadores.map(e => `
+          <tr>
+            <td style="font-weight: 600; color: #fff;">
+              ${e.entregador}
+            </td>
+            <td style="text-align: center; color: var(--text-muted); font-weight: 600;">
+              ${e.cantidad} cheques
+            </td>
+            <td style="text-align: right; font-weight: 600; color: #fff; font-family: 'Outfit', sans-serif;">
+              ${formatARS(e.total_importe || 0)}
+            </td>
+            <td style="text-align: right; font-weight: 700; color: var(--accent-emerald); font-family: 'Outfit', sans-serif;">
+              +${formatARS(e.ganancia_generada)}
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      if (mobileCards) {
+        mobileCards.innerHTML = entregadores.map((e, idx) => {
+          const rankClass = idx === 0 ? 'rank-gold' : idx === 1 ? 'rank-silver' : 'rank-bronze';
+          return `
+            <div class="client-card-item">
+              <div class="client-card-top">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span class="ranking-badge ${rankClass}">#${idx + 1}</span>
+                  <div>
+                    <div class="client-card-name">${e.entregador}</div>
+                    <div class="client-card-ops">${e.cantidad} cheque${e.cantidad === 1 ? '' : 's'} operado${e.cantidad === 1 ? '' : 's'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="client-card-financials">
+                <div class="client-fin-col">
+                  <span class="fin-label">Volumen Total</span>
+                  <span class="fin-val">${formatARS(e.total_importe || 0)}</span>
+                </div>
+                <div class="client-fin-col border-left">
+                  <span class="fin-label">Ganancia Neta</span>
+                  <span class="fin-val green">+${formatARS(e.ganancia_generada)}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
   }
 };

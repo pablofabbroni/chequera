@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
-  <link rel="stylesheet" href="/css/app.css?v=2.5.0">
+  <link rel="stylesheet" href="/css/app.css?v=2.7.0">
 </head>
 <body>
 
@@ -297,7 +297,8 @@
           </div>
 
           <!-- Gráficos Superiores: Flujo de Cobros Proyectado + Distribución por Banco -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 24px;">
+          <!-- Gráficos Superiores: Flujo de Cobros Proyectado + Distribución por Banco -->
+          <div class="dashboard-charts-grid">
             <!-- Proyección de Cobros (Cash Flow) -->
             <div class="glass-card">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
@@ -335,7 +336,7 @@
             </div>
           </div>
 
-          <!-- FILA 1: Cheques que Requieren Atención (En Fila a lo Ancho, tipo Tabla) -->
+          <!-- FILA 1: Cheques que Requieren Atención (Desktop Tabla + Móvil Tarjetas Nativas) -->
           <div class="glass-card" style="margin-bottom: 24px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
               <div>
@@ -348,7 +349,8 @@
               </div>
             </div>
             
-            <div class="table-responsive">
+            <!-- Vista Tabla (Desktop) -->
+            <div class="table-responsive desktop-table-view">
               <table class="custom-table" style="font-size: 0.85rem;">
                 <thead>
                   <tr>
@@ -364,13 +366,19 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Vista Tarjetas Nativas (Móvil) -->
+            <div id="dashboardAlertasMobileCards" class="mobile-cards-view">
+              <!-- Renderizado dinámicamente en móviles -->
+            </div>
+
             <div id="dashboardAlertasVacio" style="display: none; text-align: center; padding: 24px; color: var(--text-dim);">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 6px; color: var(--accent-emerald);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
               <div>Todos los cheques están al día. No hay alertas urgentes pendientes.</div>
             </div>
           </div>
 
-          <!-- FILA 2: Top Clientes a lo Ancho del Dashboard (Mayor Ganancia) -->
+          <!-- FILA 2: Top Clientes a lo Ancho del Dashboard (Desktop Tabla + Móvil Tarjetas Nativas) -->
           <div class="glass-card">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
               <div>
@@ -383,7 +391,8 @@
               </div>
             </div>
             
-            <div class="table-responsive">
+            <!-- Vista Tabla (Desktop) -->
+            <div class="table-responsive desktop-table-view">
               <table class="custom-table" style="font-size: 0.85rem;">
                 <thead>
                   <tr>
@@ -397,6 +406,11 @@
                   <!-- Renderizado dinámicamente -->
                 </tbody>
               </table>
+            </div>
+
+            <!-- Vista Tarjetas Nativas (Móvil) -->
+            <div id="topClientesMobileCards" class="mobile-cards-view">
+              <!-- Renderizado dinámicamente en móviles -->
             </div>
           </div>
 
@@ -948,13 +962,13 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=2.6.0"></script>
-  <script src="/js/notifications.js?v=2.6.0"></script>
-  <script src="/js/dashboard.js?v=2.6.0"></script>
-  <script src="/js/ingreso.js?v=2.6.0"></script>
-  <script src="/js/cartera.js?v=2.6.0"></script>
-  <script src="/js/entregados.js?v=2.6.0"></script>
-  <script src="/js/clientes.js?v=2.6.0"></script>
-  <script src="/js/app.js?v=2.6.0"></script>
+  <script src="/js/api.js?v=2.7.0"></script>
+  <script src="/js/notifications.js?v=2.7.0"></script>
+  <script src="/js/dashboard.js?v=2.7.0"></script>
+  <script src="/js/ingreso.js?v=2.7.0"></script>
+  <script src="/js/cartera.js?v=2.7.0"></script>
+  <script src="/js/entregados.js?v=2.7.0"></script>
+  <script src="/js/clientes.js?v=2.7.0"></script>
+  <script src="/js/app.js?v=2.7.0"></script>
 </body>
 </html>
