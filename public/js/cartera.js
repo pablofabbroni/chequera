@@ -59,6 +59,12 @@ const CarteraModule = {
         window.location.href = `/api/cheques/exportar/excel?token=${token}`;
       });
     }
+
+    // Modal Rechazo Form
+    const formRechazo = document.getElementById('formRechazoCheque');
+    if (formRechazo) {
+      formRechazo.onsubmit = (e) => this.handleConfirmarRechazo(e);
+    }
   },
 
   async cargarCheques() {
@@ -296,12 +302,35 @@ const CarteraModule = {
     }
   },
 
-  // Modal para Marcar como Rechazado
+  chequeRechazoId: null,
+
+  // Modal para Marcar como Rechazado (Motivo Opcional)
   modalRechazar(id, numero) {
-    const motivo = prompt(`Indique el motivo de RECHAZO del Cheque N° ${numero}:`, 'Sin fondos / Rechazado por el banco');
-    if (motivo !== null) {
-      this.ejecutarCambioEstado(id, 'Rechazado', motivo);
+    this.chequeRechazoId = id;
+    const modal = document.getElementById('modalRechazoCheque');
+    const input = document.getElementById('rechazoMotivoInput');
+    const txt = document.getElementById('rechazoChequeTexto');
+    if (modal) {
+      if (input) input.value = '';
+      if (txt) txt.innerHTML = `¿Confirmar estado Rechazado para el Cheque <strong>#${numero}</strong>?`;
+      modal.classList.add('show');
+      setTimeout(() => input?.focus(), 100);
     }
+  },
+
+  cerrarModalRechazo() {
+    const modal = document.getElementById('modalRechazoCheque');
+    if (modal) modal.classList.remove('show');
+    this.chequeRechazoId = null;
+  },
+
+  handleConfirmarRechazo(e) {
+    e.preventDefault();
+    if (!this.chequeRechazoId) return;
+    const id = this.chequeRechazoId;
+    const motivo = document.getElementById('rechazoMotivoInput')?.value.trim() || null;
+    this.cerrarModalRechazo();
+    this.ejecutarCambioEstado(id, 'Rechazado', motivo);
   },
 
   async ejecutarCambioEstado(id, nuevoEstado, motivoRechazo = null) {

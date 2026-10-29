@@ -216,11 +216,15 @@ async function cambiarEstado(req, res) {
       return res.status(400).json({ error: 'El cheque fue entregado. Para modificarlo primero debe revertirse la entrega.' });
     }
 
+    const motivoLimpio = (nuevoEstado === 'Rechazado' && motivoRechazo && motivoRechazo.trim())
+      ? motivoRechazo.trim()
+      : null;
+
     await pool.query(
       `UPDATE cheques 
        SET estado = ?, motivo_rechazo = ?, fecha_estado = NOW()
        WHERE id = ?`,
-      [nuevoEstado, nuevoEstado === 'Rechazado' ? (motivoRechazo || 'Rechazado por el banco') : null, id]
+      [nuevoEstado, motivoLimpio, id]
     );
 
     const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ?', [id]);

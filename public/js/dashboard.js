@@ -1,4 +1,4 @@
-// Módulo de Dashboard Financiero y Análisis Interactivo de Negocio
+// Módulo de Dashboard Financiero y Análisis de Negocio
 
 const DashboardModule = {
   chartProyeccion: null,
@@ -17,20 +17,12 @@ const DashboardModule = {
   bindEvents() {
     const selectAnio = document.getElementById('dashFiltroAnio');
     const selectMes = document.getElementById('dashFiltroMes');
-    const selectEstado = document.getElementById('dashFiltroEstado');
 
     if (selectAnio) {
       selectAnio.addEventListener('change', () => this.cargarMetricas());
     }
     if (selectMes) {
       selectMes.addEventListener('change', () => this.cargarMetricas());
-    }
-    if (selectEstado) {
-      selectEstado.addEventListener('change', (e) => {
-        if (e.target.value) {
-          App.irACarteraConFiltro(e.target.value);
-        }
-      });
     }
   },
 
@@ -60,7 +52,6 @@ const DashboardModule = {
 
     const valorActual = selectAnio.value;
     
-    // Si no hay años registrados aún, mostrar solo opción general
     if (!aniosDisponibles || aniosDisponibles.length === 0) {
       selectAnio.innerHTML = '<option value="">Todo el historial</option>';
       this.aniosCargados = true;
@@ -72,11 +63,9 @@ const DashboardModule = {
       ${aniosDisponibles.map(a => `<option value="${a}">Año ${a}</option>`).join('')}
     `;
 
-    // Si había un valor seleccionado y existe en la lista, conservarlo
     if (valorActual && aniosDisponibles.includes(parseInt(valorActual, 10))) {
       selectAnio.value = valorActual;
     } else {
-      // Por defecto seleccionar el año más reciente con datos
       selectAnio.value = aniosDisponibles[0];
     }
 
@@ -94,42 +83,40 @@ const DashboardModule = {
     const kpiCartera = document.getElementById('kpiCarteraImporte');
     const kpiCarteraCant = document.getElementById('kpiCarteraCantidad');
     if (kpiCartera) kpiCartera.textContent = formatARS(resumen.carteraPendiente?.importe || 0);
-    if (kpiCarteraCant) kpiCarteraCant.textContent = `${resumen.carteraPendiente?.cantidad || 0} cheques por cobrar ↗`;
+    if (kpiCarteraCant) kpiCarteraCant.textContent = `${resumen.carteraPendiente?.cantidad || 0} cheques por cobrar`;
 
     // Cobrados
     const kpiCobrados = document.getElementById('kpiCobradosImporte');
     const kpiCobradosCant = document.getElementById('kpiCobradosCantidad');
     if (kpiCobrados) kpiCobrados.textContent = formatARS(resumen.cobrados?.importe || 0);
-    if (kpiCobradosCant) kpiCobradosCant.textContent = `${resumen.cobrados?.cantidad || 0} cobrados ↗`;
+    if (kpiCobradosCant) kpiCobradosCant.textContent = `${resumen.cobrados?.cantidad || 0} cobrados con éxito`;
 
     // Entregados
     const kpiEntregados = document.getElementById('kpiEntregadosImporte');
     const kpiEntregadosCant = document.getElementById('kpiEntregadosCantidad');
     if (kpiEntregados) kpiEntregados.textContent = formatARS(resumen.entregados?.importe || 0);
-    if (kpiEntregadosCant) kpiEntregadosCant.textContent = `${resumen.entregados?.cantidad || 0} transferidos ↗`;
+    if (kpiEntregadosCant) kpiEntregadosCant.textContent = `${resumen.entregados?.cantidad || 0} cheques transferidos`;
 
     // Rechazados
     const kpiRechazados = document.getElementById('kpiRechazadosImporte');
     const kpiRechazadosCant = document.getElementById('kpiRechazadosCantidad');
     if (kpiRechazados) kpiRechazados.textContent = formatARS(resumen.rechazados?.importe || 0);
-    if (kpiRechazadosCant) kpiRechazadosCant.textContent = `${resumen.rechazados?.cantidad || 0} rechazados ↗`;
+    if (kpiRechazadosCant) kpiRechazadosCant.textContent = `${resumen.rechazados?.cantidad || 0} cheques con rebote`;
   },
 
   renderAlertas(chequesAlerta) {
-    const container = document.getElementById('dashboardAlertasContainer');
+    const tableBody = document.getElementById('dashboardAlertasTableBody');
+    const vacioEl = document.getElementById('dashboardAlertasVacio');
     const banner = document.getElementById('dashboardUrgentBanner');
-    if (!container) return;
 
     if (!chequesAlerta || chequesAlerta.length === 0) {
       if (banner) banner.style.display = 'none';
-      container.innerHTML = `
-        <div style="text-align: center; padding: 24px; color: var(--text-dim); font-size: 0.9rem;">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 8px; color: var(--accent-emerald);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          <div>Todos los cheques están al día. No hay alertas urgentes pendientes.</div>
-        </div>
-      `;
+      if (tableBody) tableBody.innerHTML = '';
+      if (vacioEl) vacioEl.style.display = 'block';
       return;
     }
+
+    if (vacioEl) vacioEl.style.display = 'none';
 
     const criticos = chequesAlerta.filter(c => c.metricas?.nivelAlerta === 'POR_VENCER_LEGAL');
     if (banner) {
@@ -141,44 +128,48 @@ const DashboardModule = {
       }
     }
 
-    container.innerHTML = chequesAlerta.map(c => {
-      const met = c.metricas || {};
-      const esCritico = met.nivelAlerta === 'POR_VENCER_LEGAL';
-      return `
-        <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-          <div>
-            <div style="font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;">
-              <span>#${c.numero} - ${c.banco}</span>
-              <span class="tag-urgente ${esCritico ? 'critico' : 'aviso'}">
-                ${esCritico ? `¡Vence legal en ${met.diasParaVencLegal}d!` : `Cobro en ${met.diasParaCobro}d`}
-              </span>
-            </div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-              Emisor: ${c.emisor} | Cobro: ${formatFecha(c.fecha_cobro)} | Venc. Legal (30d): ${met.fechaVencimientoLegal || '-'}
-            </div>
-          </div>
-          <div style="text-align: right; display: flex; align-items: center; gap: 10px; margin-left: auto;">
-            <div style="font-weight: 700; color: #fff; font-family: 'Outfit', sans-serif;">
-              ${formatARS(c.importe)}
-            </div>
-            <button class="btn btn-secondary btn-sm" onclick="DashboardModule.gestionarChequeAlerta('${c.numero}')" style="font-size: 0.75rem; padding: 5px 12px; font-weight: 600; border-color: rgba(14, 165, 233, 0.4); color: var(--primary);">
-              Gestionar ↗
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  },
+    if (tableBody) {
+      tableBody.innerHTML = chequesAlerta.map(c => {
+        const met = c.metricas || {};
+        const esCritico = met.nivelAlerta === 'POR_VENCER_LEGAL';
 
-  gestionarChequeAlerta(numeroCheque) {
-    window.location.hash = '#cartera';
-    setTimeout(() => {
-      const search = document.getElementById('searchCartera');
-      if (search) {
-        search.value = numeroCheque;
-        search.dispatchEvent(new Event('input'));
-      }
-    }, 150);
+        let badgeTag = '';
+        if (esCritico) {
+          badgeTag = `<span class="tag-urgente critico">⚠️ ¡Vence legal en ${met.diasParaVencLegal}d!</span>`;
+        } else if (met.nivelAlerta === 'COBRO_CERCANO' || met.nivelAlerta === 'LISTO_COBRO') {
+          badgeTag = `<span class="tag-urgente aviso">📅 Cobro en ${met.diasParaCobro}d</span>`;
+        } else if (met.nivelAlerta === 'VENCIDO') {
+          badgeTag = `<span class="tag-urgente critico">⛔ Vencido Legal</span>`;
+        }
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: #fff;">#${c.numero}</div>
+              <div style="font-size: 0.8rem; color: var(--primary); font-weight: 600;">${c.banco}</div>
+            </td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">${c.emisor}</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">Entregó: ${c.entregador}</div>
+            </td>
+            <td>
+              <div style="font-weight: 600; color: #fff;">${formatFecha(c.fecha_cobro)}</div>
+            </td>
+            <td>
+              <div style="color: var(--text-dim); font-size: 0.82rem;">${met.fechaVencimientoLegal || '-'}</div>
+            </td>
+            <td>
+              <div style="font-weight: 700; color: #fff; font-family: 'Outfit', sans-serif;">
+                ${formatARS(c.importe)}
+              </div>
+            </td>
+            <td>
+              ${badgeTag}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
   },
 
   renderGraficos(data) {
@@ -205,32 +196,13 @@ const DashboardModule = {
             tension: 0.35,
             pointBackgroundColor: '#10b981',
             pointBorderColor: '#fff',
-            pointHoverBackgroundColor: '#fff',
-            pointHoverBorderColor: '#10b981',
-            pointRadius: 5,
-            pointHoverRadius: 7
+            pointRadius: 4,
+            pointHoverRadius: 6
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          onClick: (evt, elements) => {
-            if (elements && elements.length > 0) {
-              const index = elements[0].index;
-              const periodo = labels[index];
-              if (periodo) {
-                // Filtrar Cartera por el período seleccionado
-                window.location.hash = '#cartera';
-                setTimeout(() => {
-                  const search = document.getElementById('searchCartera');
-                  if (search) {
-                    search.value = periodo;
-                    search.dispatchEvent(new Event('input'));
-                  }
-                }, 150);
-              }
-            }
-          },
           plugins: {
             legend: { labels: { color: '#94a3b8' } },
             tooltip: {
@@ -247,7 +219,7 @@ const DashboardModule = {
       });
     }
 
-    // 2. Gráfico Interactivo de Distribución por Banco
+    // 2. Gráfico de Distribución por Banco
     const canvasBancos = document.getElementById('chartDistribucionBancos');
     if (canvasBancos && data.topBancos && data.topBancos.length > 0) {
       if (this.chartBancos) this.chartBancos.destroy();
@@ -276,28 +248,11 @@ const DashboardModule = {
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          onClick: (evt, elements) => {
-            if (elements && elements.length > 0) {
-              const index = elements[0].index;
-              const bancoSeleccionado = labels[index];
-              if (bancoSeleccionado) {
-                // Filtrar Cartera por el banco seleccionado al hacer clic en el gráfico
-                window.location.hash = '#cartera';
-                setTimeout(() => {
-                  const search = document.getElementById('searchCartera');
-                  if (search) {
-                    search.value = bancoSeleccionado;
-                    search.dispatchEvent(new Event('input'));
-                  }
-                }, 150);
-              }
-            }
-          },
           plugins: {
             legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } },
             tooltip: {
               callbacks: {
-                label: (ctx) => ` ${ctx.label}: ${formatARS(ctx.raw)} (Clic para ver cheques)`
+                label: (ctx) => ` ${ctx.label}: ${formatARS(ctx.raw)}`
               }
             }
           }
@@ -309,13 +264,25 @@ const DashboardModule = {
   renderTopTablas(bancos, entregadores) {
     const tbodyEntregadores = document.getElementById('tablaTopEntregadoresBody');
     if (tbodyEntregadores && entregadores) {
+      if (entregadores.length === 0) {
+        tbodyEntregadores.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">Sin registros de clientes</td></tr>`;
+        return;
+      }
+
       tbodyEntregadores.innerHTML = entregadores.map(e => `
-        <tr style="cursor: pointer;" onclick="DashboardModule.gestionarChequeAlerta('${e.entregador.replace(/'/g, "\\'")}')" title="Ver cheques de ${e.entregador}">
+        <tr>
           <td style="font-weight: 600; color: #fff;">
-            ${e.entregador} <span style="font-size: 0.72rem; color: var(--primary);">↗</span>
+            ${e.entregador}
           </td>
-          <td style="color: var(--text-muted);">${e.cantidad} ch.</td>
-          <td style="text-align: right; font-weight: 700; color: var(--accent-emerald);">${formatARS(e.ganancia_generada)}</td>
+          <td style="text-align: center; color: var(--text-muted); font-weight: 600;">
+            ${e.cantidad} cheques
+          </td>
+          <td style="text-align: right; font-weight: 600; color: #fff; font-family: 'Outfit', sans-serif;">
+            ${formatARS(e.total_importe || 0)}
+          </td>
+          <td style="text-align: right; font-weight: 700; color: var(--accent-emerald); font-family: 'Outfit', sans-serif;">
+            +${formatARS(e.ganancia_generada)}
+          </td>
         </tr>
       `).join('');
     }

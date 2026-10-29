@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
-  <link rel="stylesheet" href="/css/app.css?v=2.4.0">
+  <link rel="stylesheet" href="/css/app.css?v=2.5.0">
 </head>
 <body>
 
@@ -201,38 +201,38 @@
             </a>
           </div>
 
-          <!-- Filtros del Dashboard -->
-          <div class="filter-bar">
+          <!-- Filtros del Dashboard (A Nivel Fila sin Espacios Vacíos) -->
+          <div class="dashboard-filter-bar">
             <div>
-              <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 700; color: #fff;">
+              <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; color: #fff; margin: 0;">
                 Resumen Ejecutivo
               </h2>
             </div>
-            <div class="filter-group">
-              <select id="dashFiltroAnio" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
-                <option value="">Todo el historial</option>
-              </select>
-              <select id="dashFiltroMes" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
-                <option value="">Todos los meses</option>
-                <option value="1">Enero</option>
-                <option value="2">Febrero</option>
-                <option value="3">Marzo</option>
-                <option value="4">Abril</option>
-                <option value="5">Mayo</option>
-                <option value="6">Junio</option>
-                <option value="7">Julio</option>
-                <option value="8">Agosto</option>
-                <option value="9">Septiembre</option>
-                <option value="10">Octubre</option>
-                <option value="11">Noviembre</option>
-                <option value="12">Diciembre</option>
-              </select>
-              <select id="dashFiltroEstado" class="form-control" style="padding: 8px 12px; font-size: 0.88rem;">
-                <option value="">Filtrar por estado...</option>
-                <option value="Pendiente">Ir a Pendientes (Stock)</option>
-                <option value="Cobrado">Ir a Cobrados</option>
-                <option value="Rechazado">Ir a Rechazados</option>
-              </select>
+            <div class="dashboard-filters-row">
+              <div class="filter-item-inline">
+                <label for="dashFiltroAnio" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Año:</label>
+                <select id="dashFiltroAnio" class="form-control filter-select">
+                  <option value="">Todo el historial</option>
+                </select>
+              </div>
+              <div class="filter-item-inline">
+                <label for="dashFiltroMes" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Mes:</label>
+                <select id="dashFiltroMes" class="form-control filter-select">
+                  <option value="">Todos los meses</option>
+                  <option value="1">Enero</option>
+                  <option value="2">Febrero</option>
+                  <option value="3">Marzo</option>
+                  <option value="4">Abril</option>
+                  <option value="5">Mayo</option>
+                  <option value="6">Junio</option>
+                  <option value="7">Julio</option>
+                  <option value="8">Agosto</option>
+                  <option value="9">Septiembre</option>
+                  <option value="10">Octubre</option>
+                  <option value="11">Noviembre</option>
+                  <option value="12">Diciembre</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -251,7 +251,7 @@
             </div>
 
             <!-- Cartera Pendiente -->
-            <div class="stat-card" onclick="App.irACarteraConFiltro('Pendiente')" title="Haga clic para ver los cheques pendientes en Cartera">
+            <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Cartera (Por Cobrar)</span>
                 <div class="stat-icon amber">
@@ -259,11 +259,11 @@
                 </div>
               </div>
               <div class="stat-value" id="kpiCarteraImporte">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiCarteraCantidad">0 cheques por cobrar ↗</div>
+              <div class="stat-subtitle" id="kpiCarteraCantidad">0 cheques por cobrar</div>
             </div>
 
             <!-- Cobrados -->
-            <div class="stat-card" onclick="App.irACarteraConFiltro('Cobrado')" title="Haga clic para ver los cheques cobrados">
+            <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Cheques Cobrados</span>
                 <div class="stat-icon primary">
@@ -271,11 +271,11 @@
                 </div>
               </div>
               <div class="stat-value" id="kpiCobradosImporte">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiCobradosCantidad">0 cobrados con éxito ↗</div>
+              <div class="stat-subtitle" id="kpiCobradosCantidad">0 cobrados con éxito</div>
             </div>
 
             <!-- Entregados (Salidas de caja) -->
-            <div class="stat-card" onclick="window.location.hash = '#entregados'" title="Haga clic para ver cheques entregados a terceros">
+            <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Entregados (Salidas)</span>
                 <div class="stat-icon indigo">
@@ -283,11 +283,11 @@
                 </div>
               </div>
               <div class="stat-value" id="kpiEntregadosImporte">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiEntregadosCantidad">0 cheques transferidos ↗</div>
+              <div class="stat-subtitle" id="kpiEntregadosCantidad">0 cheques transferidos</div>
             </div>
 
             <!-- Rechazados -->
-            <div class="stat-card" onclick="App.irACarteraConFiltro('Rechazado')" title="Haga clic para ver cheques rechazados">
+            <div class="stat-card">
               <div class="stat-header">
                 <span class="stat-title">Cheques Rechazados</span>
                 <div class="stat-icon rose">
@@ -295,12 +295,12 @@
                 </div>
               </div>
               <div class="stat-value" id="kpiRechazadosImporte" style="color: var(--accent-rose);">$ 0,00</div>
-              <div class="stat-subtitle" id="kpiRechazadosCantidad">0 cheques con rebote ↗</div>
+              <div class="stat-subtitle" id="kpiRechazadosCantidad">0 cheques con rebote</div>
             </div>
           </div>
 
-          <!-- Gráficos Interactivos: Flujo de Cobros Proyectado (Cash Flow) + Distribución Bancos -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 28px;">
+          <!-- Gráficos Superiores: Flujo de Cobros Proyectado + Distribución por Banco -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 24px;">
             <!-- Proyección de Cobros (Cash Flow) -->
             <div class="glass-card">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
@@ -309,12 +309,12 @@
                     📈 Flujo de Cobros Proyectado (Cash Flow)
                   </h3>
                   <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
-                    Muestra el dinero a cobrar según la fecha de cobro de los cheques en cartera pendientes. Haga clic en un mes para ver cheques.
+                    Previsión de fondos a cobrar según el vencimiento de los cheques en cartera pendientes.
                   </p>
                 </div>
                 <span class="badge-status pendiente" style="font-size: 0.75rem;">Liquidez futura</span>
               </div>
-              <div style="height: 260px; position: relative;">
+              <div style="height: 250px; position: relative;">
                 <canvas id="chartProyeccionCobros"></canvas>
               </div>
             </div>
@@ -327,55 +327,82 @@
                     Distribución por Banco
                   </h3>
                   <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 2px;">
-                    Concentración de fondos por entidad emisora (clic para filtrar en Cartera).
+                    Concentración de fondos por entidad emisora bancaria.
                   </p>
                 </div>
                 <span style="font-size: 0.75rem; color: var(--text-dim);">Entidades</span>
               </div>
-              <div style="height: 240px; position: relative;">
+              <div style="height: 250px; position: relative;">
                 <canvas id="chartDistribucionBancos"></canvas>
               </div>
             </div>
           </div>
 
-          <!-- Fila Inferior: Alertas Urgentes + Top Clientes -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;">
-            <!-- Cheques con Alerta Inmediata -->
-            <div class="glass-card">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <!-- FILA 1: Cheques que Requieren Atención (En Fila a lo Ancho, tipo Tabla) -->
+          <div class="glass-card" style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
                   <span style="color: var(--accent-rose);">⚠️</span> Cheques que Requieren Atención
                 </h3>
-              </div>
-              <div id="dashboardAlertasContainer" style="max-height: 280px; overflow-y: auto;">
-                <div style="text-align: center; padding: 20px; color: var(--text-dim);">Cargando alertas...</div>
+                <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 2px;">
+                  Cheques con cobro inmediato o próximos a vencer su plazo legal de 30 días posteriores al vencimiento.
+                </p>
               </div>
             </div>
+            
+            <div class="table-responsive">
+              <table class="custom-table" style="font-size: 0.85rem;">
+                <thead>
+                  <tr>
+                    <th style="width: 22%;">N° Cheque / Banco</th>
+                    <th style="width: 24%;">Emisor / Entregador</th>
+                    <th style="width: 18%;">Fecha Cobro</th>
+                    <th style="width: 18%;">Venc. Legal (30d)</th>
+                    <th style="width: 18%;">Importe ($)</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboardAlertasTableBody">
+                  <!-- Renderizado dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+            <div id="dashboardAlertasVacio" style="display: none; text-align: center; padding: 24px; color: var(--text-dim);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom: 6px; color: var(--accent-emerald);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <div>Todos los cheques están al día. No hay alertas urgentes pendientes.</div>
+            </div>
+          </div>
 
-            <!-- Top Entregadores (Quien genera más utilidad) -->
-            <div class="glass-card">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                <h3 style="font-size: 1.05rem; font-weight: 700; color: #fff;">
-                  Top Clientes (Mayor Ganancia)
+          <!-- FILA 2: Top Clientes a lo Ancho del Dashboard (Mayor Ganancia) -->
+          <div class="glass-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <div>
+                <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff;">
+                  Top Clientes (Mayor Ganancia Generada)
                 </h3>
-                <a href="#clientes" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">
-                  Ver Directorio ↗
-                </a>
+                <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 2px;">
+                  Clientes con mayor volumen operado y mayor rentabilidad generada en intereses descontados.
+                </p>
               </div>
-              <div class="table-responsive">
-                <table class="custom-table" style="font-size: 0.82rem;">
-                  <thead>
-                    <tr>
-                      <th>Cliente</th>
-                      <th>Cheques</th>
-                      <th style="text-align: right;">Ganancia ($)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tablaTopEntregadoresBody">
-                    <tr><td colspan="3" style="text-align: center; color: var(--text-dim);">Sin registros</td></tr>
-                  </tbody>
-                </table>
-              </div>
+              <a href="#clientes" class="btn btn-secondary btn-sm" style="font-size: 0.78rem;">
+                Ver Directorio Completo ↗
+              </a>
+            </div>
+            
+            <div class="table-responsive">
+              <table class="custom-table" style="font-size: 0.85rem;">
+                <thead>
+                  <tr>
+                    <th style="width: 30%;">Cliente / Entregador</th>
+                    <th style="width: 20%; text-align: center;">Cheques Operados</th>
+                    <th style="width: 25%; text-align: right;">Volumen Total ($)</th>
+                    <th style="width: 25%; text-align: right;">Ganancia Neta en Intereses ($)</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaTopEntregadoresBody">
+                  <!-- Renderizado dinámicamente -->
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -964,17 +991,56 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
+  <!-- MODAL: RECHAZO DE CHEQUE (Motivo Opcional) -->
+  <!-- ========================================== -->
+  <div id="modalRechazoCheque" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 style="color: #fff; font-size: 1.1rem; font-weight: 700;">Rechazar Cheque</h3>
+        <button type="button" class="btn-icon" onclick="CarteraModule.cerrarModalRechazo()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form id="formRechazoCheque">
+        <div class="modal-body">
+          <p id="rechazoChequeTexto" style="font-size: 0.95rem; color: #fff; margin-bottom: 14px;">
+            ¿Confirmar estado Rechazado para este cheque?
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="rechazoMotivoInput">Motivo del rechazo (opcional)</label>
+            <input type="text" id="rechazoMotivoInput" class="form-control" placeholder="Ej: Sin fondos, orden de no pago, etc.">
+            <span style="font-size: 0.74rem; color: var(--text-dim); margin-top: 4px;">
+              Si no declaras ningún motivo, se registrará como rechazado sin especificar.
+            </span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="CarteraModule.cerrarModalRechazo()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-danger" style="font-weight: 700;">
+            Rechazar Cheque
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=2.4.0"></script>
-  <script src="/js/notifications.js?v=2.4.0"></script>
-  <script src="/js/dashboard.js?v=2.4.0"></script>
-  <script src="/js/ingreso.js?v=2.4.0"></script>
-  <script src="/js/cartera.js?v=2.4.0"></script>
-  <script src="/js/entregados.js?v=2.4.0"></script>
-  <script src="/js/clientes.js?v=2.4.0"></script>
-  <script src="/js/app.js?v=2.4.0"></script>
+  <script src="/js/api.js?v=2.5.0"></script>
+  <script src="/js/notifications.js?v=2.5.0"></script>
+  <script src="/js/dashboard.js?v=2.5.0"></script>
+  <script src="/js/ingreso.js?v=2.5.0"></script>
+  <script src="/js/cartera.js?v=2.5.0"></script>
+  <script src="/js/entregados.js?v=2.5.0"></script>
+  <script src="/js/clientes.js?v=2.5.0"></script>
+  <script src="/js/app.js?v=2.5.0"></script>
 </body>
 </html>
