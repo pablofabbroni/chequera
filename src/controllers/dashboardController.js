@@ -19,17 +19,17 @@ async function obtenerMetricasDashboard(req, res) {
     }
 
     if (cliente && cliente.trim()) {
-      filtroFecha += ' AND entregador = ?';
+      filtroFecha += ' AND TRIM(entregador) = ?';
       params.push(cliente.trim());
     }
 
-    // 1. Totales Generales según filtro
+    // 1. Totales Generales según filtro (Ganancia Neta descuenta costos bancarios de cobro)
     const [totalesRows] = await pool.query(`
       SELECT 
         estado,
         COUNT(*) AS cantidad,
         COALESCE(SUM(importe), 0) AS total_importe,
-        COALESCE(SUM(interes_cobrado), 0) AS total_interes,
+        COALESCE(SUM(interes_cobrado - COALESCE(descuento_banco, 0)), 0) AS total_interes,
         COALESCE(SUM(dinero_saliente), 0) AS total_saliente
       FROM cheques
       WHERE ${filtroFecha}
@@ -68,39 +68,32 @@ async function obtenerMetricasDashboard(req, res) {
       ? Math.round(((totalGananciasNetas / totalGlobalImporte) * 100) * 100) / 100
       : 0;
 
-    // 2. Evolución mensual (últimos 12 meses o meses del año filtrado)
+    // 2. Evolución mensual (últimos 12 meses o meses del año/cliente filtrado)
     const [evolucionRows] = await pool.query(`
       SELECT 
         DATE_FORMAT(fecha_recepcion, '%Y-%m') AS periodo,
         COUNT(*) AS cantidad,
         COALESCE(SUM(importe), 0) AS total_importe,
-        COALESCE(SUM(interes_cobrado), 0) AS total_ganancia
+        COALESCE(SUM(interes_cobrado - COALESCE(descuento_banco, 0)), 0) AS total_ganancia
       FROM cheques
+      WHERE ${filtroFecha}
       GROUP BY DATE_FORMAT(fecha_recepcion, '%Y-%m')
       ORDER BY periodo DESC
       LIMIT 12
-    `);
+    `, params);
 
-    // 3. Proyección de Cobros (Cash Flow futuro de cheques Pendientes)
-    let proySql = `
+    // 3. Proyección de Cobros (Cash Flow futuro de cheques Pendientes respetando filtros activos)
+    const [proyeccionRows] = await pool.query(`
       SELECT 
         DATE_FORMAT(fecha_cobro, '%Y-%m') AS periodo_cobro,
         COUNT(*) AS cantidad,
         COALESCE(SUM(importe), 0) AS total_a_cobrar
       FROM cheques
-      WHERE estado = 'Pendiente'
-    `;
-    const proyParams = [];
-    if (cliente && cliente.trim()) {
-      proySql += ' AND entregador = ?';
-      proyParams.push(cliente.trim());
-    }
-    proySql += `
+      WHERE estado = 'Pendiente' AND ${filtroFecha}
       GROUP BY DATE_FORMAT(fecha_cobro, '%Y-%m')
       ORDER BY periodo_cobro ASC
       LIMIT 6
-    `;
-    const [proyeccionRows] = await pool.query(proySql, proyParams);
+    `, params);
 
     // 4. Distribución por Bancos principales
     const [bancosRows] = await pool.query(`
@@ -115,28 +108,26 @@ async function obtenerMetricasDashboard(req, res) {
       LIMIT 5
     `, params);
 
-    // 5. Top Entregadores / Clientes que descuentan
+    // 5. Top Entregadores / Clientes que descuentan (respetando filtros activos)
     const [entregadoresRows] = await pool.query(`
       SELECT 
         entregador,
         COUNT(*) AS cantidad,
         COALESCE(SUM(importe), 0) AS total_importe,
-        COALESCE(SUM(interes_cobrado), 0) AS ganancia_generada
+        COALESCE(SUM(interes_cobrado - COALESCE(descuento_banco, 0)), 0) AS ganancia_generada
       FROM cheques
+      WHERE ${filtroFecha}
       GROUP BY entregador
       ORDER BY ganancia_generada DESC
       LIMIT 5
-    `);
+    `, params);
 
-    // 6. Cheques que requieren atención urgente
-    let alertaSql = "SELECT * FROM cheques WHERE estado = 'Pendiente'";
-    const alertaParams = [];
-    if (cliente && cliente.trim()) {
-      alertaSql += " AND entregador = ?";
-      alertaParams.push(cliente.trim());
-    }
-    alertaSql += " ORDER BY fecha_cobro ASC";
-    const [pendientes] = await pool.query(alertaSql, alertaParams);
+    // 6. Cheques que requieren atención urgente (respetando filtros activos)
+    const [pendientes] = await pool.query(`
+      SELECT * FROM cheques
+      WHERE estado = 'Pendiente' AND ${filtroFecha}
+      ORDER BY fecha_cobro ASC
+    `, params);
 
     const chequesAlerta = [];
     for (const ch of pendientes) {

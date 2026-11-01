@@ -73,7 +73,7 @@ const DashboardModule = {
     if (valorActual && aniosDisponibles.includes(parseInt(valorActual, 10))) {
       selectAnio.value = valorActual;
     } else {
-      selectAnio.value = aniosDisponibles[0];
+      selectAnio.value = '';
     }
 
     this.aniosCargados = true;
@@ -159,36 +159,52 @@ const DashboardModule = {
 
         let badgeTag = '';
         if (esCritico) {
-          badgeTag = `<span class="tag-urgente critico">⚠️ ¡Vence legal en ${met.diasParaVencLegal}d!</span>`;
+          badgeTag = `<div class="tag-urgente critico" style="margin-top: 3px;">⚠️ Vence en ${met.diasParaVencLegal}d</div>`;
         } else if (met.nivelAlerta === 'COBRO_CERCANO' || met.nivelAlerta === 'LISTO_COBRO') {
-          badgeTag = `<span class="tag-urgente aviso">📅 Cobro en ${met.diasParaCobro}d</span>`;
+          badgeTag = `<div class="tag-urgente aviso" style="margin-top: 3px;">📅 Cobro en ${met.diasParaCobro}d</div>`;
         } else if (met.nivelAlerta === 'VENCIDO') {
-          badgeTag = `<span class="tag-urgente critico">⛔ Vencido Legal</span>`;
+          badgeTag = `<div class="tag-urgente critico" style="margin-top: 3px;">⛔ Vencido Legal</div>`;
         }
 
         return `
           <tr>
             <td>
-              <div style="font-weight: 700; color: #fff;">#${c.numero}</div>
+              <div style="font-weight: 700; color: #fff; font-size: 0.92rem;">#${c.numero}</div>
               <div style="font-size: 0.8rem; color: var(--primary); font-weight: 600;">${c.banco}</div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">Recepción: ${formatFecha(c.fecha_recepcion)}</div>
             </td>
             <td>
               <div style="font-weight: 600; color: #fff;">${c.emisor}</div>
-              <div style="font-size: 0.78rem; color: var(--text-muted);">Entregó: ${c.entregador}</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">Entregó: <span style="color: #e2e8f0;">${c.entregador}</span></div>
             </td>
             <td>
-              <div style="font-weight: 600; color: #fff;">${formatFecha(c.fecha_cobro)}</div>
+              <div style="font-weight: 700; color: #fff;">${formatFecha(c.fecha_cobro)}</div>
+              ${badgeTag}
+              <div style="color: var(--text-dim); font-size: 0.72rem; margin-top: 2px;">Vence legal: ${met.fechaVencimientoLegal || '-'}</div>
             </td>
             <td>
-              <div style="color: var(--text-dim); font-size: 0.82rem;">${met.fechaVencimientoLegal || '-'}</div>
-            </td>
-            <td>
-              <div style="font-weight: 700; color: #fff; font-family: 'Outfit', sans-serif;">
+              <div style="font-weight: 700; color: #fff; font-family: 'Outfit', sans-serif; font-size: 1rem;">
                 ${formatARS(c.importe)}
+              </div>
+              <div style="font-size: 0.76rem; color: var(--accent-emerald); font-weight: 600;">
+                +${formatARS(c.interes_cobrado)} (${c.tasa_interes}%)
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-dim);">
+                Saliente: ${formatARS(c.dinero_saliente)}
               </div>
             </td>
             <td>
-              ${badgeTag}
+              <div class="alertas-actions-grid">
+                <button class="btn-action cobrar" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" title="Registrar Cobro">
+                  Cobrado
+                </button>
+                <button class="btn-action entregar" onclick="EntregadosModule.abrirModalEntregaConCheque(${c.id})" title="Entregar Cheque a Tercero">
+                  Entregar
+                </button>
+                <button class="btn-action rechazar" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" title="Marcar como Rechazado">
+                  Rechazado
+                </button>
+              </div>
             </td>
           </tr>
         `;
@@ -236,10 +252,13 @@ const DashboardModule = {
             </div>
 
             <div class="card-actions-row">
-              <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+              <button class="btn-action cobrar" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')">
                 Cobrado
               </button>
-              <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+              <button class="btn-action entregar" onclick="EntregadosModule.abrirModalEntregaConCheque(${c.id})">
+                Entregar
+              </button>
+              <button class="btn-action rechazar" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')">
                 Rechazado
               </button>
             </div>
@@ -298,11 +317,18 @@ const DashboardModule = {
 
     // 2. Gráfico de Distribución por Banco
     const canvasBancos = document.getElementById('chartDistribucionBancos');
-    if (canvasBancos && data.topBancos && data.topBancos.length > 0) {
-      if (this.chartBancos) this.chartBancos.destroy();
+    if (canvasBancos) {
+      if (this.chartBancos) {
+        this.chartBancos.destroy();
+        this.chartBancos = null;
+      }
 
-      const labels = data.topBancos.map(b => b.banco);
-      const dataValues = data.topBancos.map(b => Number(b.total_importe));
+      const tieneDatosBancos = Array.isArray(data.topBancos) && data.topBancos.length > 0;
+      const labels = tieneDatosBancos ? data.topBancos.map(b => b.banco) : ['Sin cheques registrados'];
+      const dataValues = tieneDatosBancos ? data.topBancos.map(b => Number(b.total_importe)) : [1];
+      const bgColors = tieneDatosBancos
+        ? ['#0ea5e9', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6']
+        : ['rgba(148, 163, 184, 0.12)'];
 
       this.chartBancos = new Chart(canvasBancos, {
         type: 'doughnut',
@@ -310,16 +336,9 @@ const DashboardModule = {
           labels,
           datasets: [{
             data: dataValues,
-            backgroundColor: [
-              '#0ea5e9',
-              '#10b981',
-              '#6366f1',
-              '#f59e0b',
-              '#ec4899',
-              '#8b5cf6'
-            ],
+            backgroundColor: bgColors,
             borderWidth: 0,
-            hoverOffset: 6
+            hoverOffset: tieneDatosBancos ? 6 : 0
           }]
         },
         options: {
@@ -329,7 +348,9 @@ const DashboardModule = {
             legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } },
             tooltip: {
               callbacks: {
-                label: (ctx) => ` ${ctx.label}: ${formatARS(ctx.raw)}`
+                label: (ctx) => tieneDatosBancos
+                  ? ` ${ctx.label}: ${formatARS(ctx.raw)}`
+                  : ' Sin cheques registrados ($ 0,00)'
               }
             }
           }

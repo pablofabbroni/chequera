@@ -200,7 +200,7 @@ async function obtenerChequePorId(req, res) {
 async function cambiarEstado(req, res) {
   try {
     const { id } = req.params;
-    const { nuevoEstado, motivoRechazo } = req.body;
+    const { nuevoEstado, motivoRechazo, tipoCobro, tasaDescuentoBanco } = req.body;
 
     if (!['Pendiente', 'Cobrado', 'Rechazado'].includes(nuevoEstado)) {
       return res.status(400).json({ error: 'Estado no válido para esta acción.' });
@@ -221,17 +221,34 @@ async function cambiarEstado(req, res) {
       ? motivoRechazo.trim()
       : null;
 
+    let tipoCobroVal = null;
+    let tasaBancoVal = 0;
+    let descuentoBancoVal = 0;
+    let montoNetoCobradoVal = null;
+
+    if (nuevoEstado === 'Cobrado') {
+      tipoCobroVal = tipoCobro === 'ANTICIPADO' ? 'ANTICIPADO' : 'EN_FECHA';
+      const parsedTasa = parseFloat(tasaDescuentoBanco);
+      tasaBancoVal = !isNaN(parsedTasa) && parsedTasa >= 0 ? parsedTasa : 0;
+      const numImporte = Number(cheque.importe) || 0;
+      descuentoBancoVal = Math.round((numImporte * (tasaBancoVal / 100)) * 100) / 100;
+      montoNetoCobradoVal = Math.round((numImporte - descuentoBancoVal) * 100) / 100;
+    }
+
     await pool.query(
       `UPDATE cheques 
-       SET estado = ?, motivo_rechazo = ?, fecha_estado = NOW()
+       SET estado = ?, motivo_rechazo = ?, fecha_estado = NOW(),
+           tipo_cobro = ?, tasa_descuento_banco = ?, descuento_banco = ?, monto_neto_cobrado = ?
        WHERE id = ?`,
-      [nuevoEstado, motivoLimpio, id]
+      [nuevoEstado, motivoLimpio, tipoCobroVal, tasaBancoVal, descuentoBancoVal, montoNetoCobradoVal, id]
     );
 
     const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ?', [id]);
 
     return res.json({
-      mensaje: `Cheque marcado como "${nuevoEstado}".`,
+      mensaje: nuevoEstado === 'Cobrado'
+        ? `Cheque #${cheque.numero} marcado como Cobrado (${tipoCobroVal === 'ANTICIPADO' ? 'Cobro anticipado' : 'Cobro en fecha'} - Desc. banco: ${tasaBancoVal}%).`
+        : `Cheque marcado como "${nuevoEstado}".`,
       cheque: {
         ...actualizado[0],
         metricas: calcularMetricasCheque(actualizado[0])
@@ -325,9 +342,14 @@ async function exportarExcel(req, res) {
         'Vencimiento Legal (30d)': metricas.fechaVencimientoLegal,
         'Importe ($)': Number(c.importe),
         'Tasa Aplicada (%)': Number(c.tasa_interes),
-        'Interés Cobrado / Ganancia ($)': Number(c.interes_cobrado),
+        'Interés Cobrado al Cliente ($)': Number(c.interes_cobrado),
+        'Descuento Bancario ($)': Number(c.descuento_banco || 0),
+        'Ganancia Neta Final ($)': Math.round(((Number(c.interes_cobrado) || 0) - (Number(c.descuento_banco) || 0)) * 100) / 100,
         'Dinero Saliente ($)': Number(c.dinero_saliente),
         'Estado': c.estado,
+        'Modalidad Cobro': c.estado === 'Cobrado'
+          ? (c.tipo_cobro === 'ANTICIPADO' ? `Anticipado (${c.tasa_descuento_banco || 0}%)` : `En fecha - Impuesto (${c.tasa_descuento_banco || 0}%)`)
+          : '-',
         'Estado Alerta': metricas.mensajeAlerta || 'Al día',
         'Notas': c.notas || ''
       };

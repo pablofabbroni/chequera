@@ -21,7 +21,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
-  <link rel="stylesheet" href="/css/app.css?v=2.7.0">
+  <link rel="stylesheet" href="/css/app.css?v=2.8.0">
 </head>
 <body>
 
@@ -354,11 +354,11 @@
               <table class="custom-table" style="font-size: 0.85rem;">
                 <thead>
                   <tr>
-                    <th style="width: 22%;">N° Cheque / Banco</th>
-                    <th style="width: 24%;">Emisor / Entregador</th>
-                    <th style="width: 18%;">Fecha Cobro</th>
-                    <th style="width: 18%;">Venc. Legal (30d)</th>
-                    <th style="width: 18%;">Importe ($)</th>
+                    <th style="width: 18%;">N° Cheque / Banco</th>
+                    <th style="width: 20%;">Emisor / Entregador</th>
+                    <th style="width: 19%;">Fecha Cobro & Alerta</th>
+                    <th style="width: 19%;">Importe / Rendimiento</th>
+                    <th style="width: 24%;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="dashboardAlertasTableBody">
@@ -502,10 +502,9 @@
                 <!-- Tasa de Interés (%) -->
                 <div class="form-group">
                   <label class="form-label" for="inputTasa">Tasa de Interés Cobrada (%) *</label>
-                  <div style="position: relative;">
-                    <input type="number" id="inputTasa" step="0.01" min="0" class="form-control" placeholder="Ej: 5.5" value="5.0" style="font-size: 1.1rem; font-weight: 700; padding-right: 36px;" required>
-                    <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--text-dim);">%</span>
-                  </div>
+                  <select id="inputTasa" class="form-control" style="font-size: 1.05rem; font-weight: 700;" required>
+                    <!-- Opciones de 1% a 30% con pasos de 0,5% generadas dinámicamente -->
+                  </select>
                 </div>
               </div>
 
@@ -619,11 +618,11 @@
               <table class="custom-table">
                 <thead>
                   <tr>
-                    <th style="width: 20%;">Cheque / Banco</th>
-                    <th style="width: 22%;">Emisor / Entregador</th>
-                    <th style="width: 20%;">Fecha Cobro & Alerta</th>
-                    <th style="width: 20%;">Importe / Rendimiento</th>
-                    <th style="width: 18%;">Acciones</th>
+                    <th style="width: 18%;">Cheque / Banco</th>
+                    <th style="width: 20%;">Emisor / Entregador</th>
+                    <th style="width: 19%;">Fecha Cobro & Alerta</th>
+                    <th style="width: 19%;">Importe / Rendimiento</th>
+                    <th style="width: 24%;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="tablaCarteraBody">
@@ -920,6 +919,98 @@
   </div>
 
   <!-- ========================================== -->
+  <!-- MODAL: COBRAR CHEQUE (2 Opciones de Cobro) -->
+  <!-- ========================================== -->
+  <div id="modalCobrarCheque" class="modal-overlay">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 style="color: #fff; font-size: 1.15rem; font-weight: 700;">Registrar Cobro de Cheque</h3>
+        <button type="button" class="btn-icon" onclick="CarteraModule.cerrarModalCobrar()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form id="formCobrarCheque">
+        <div class="modal-body">
+          <!-- Resumen del cheque a cobrar -->
+          <div id="cobroChequeResumenBox" style="padding: 12px 16px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 16px;">
+          </div>
+
+          <!-- Selector de Modalidad de Cobro -->
+          <div class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label">Modalidad de Cobro en Banco *</label>
+            <div class="cobro-options-grid">
+              <label class="cobro-option-card active" id="cardOpcionCobroFecha">
+                <input type="radio" name="tipoCobroCheque" value="EN_FECHA" checked>
+                <div class="cobro-option-title">📅 En Fecha de Cobro</div>
+                <div class="cobro-option-desc">El banco descuenta el Impuesto al Cheque</div>
+              </label>
+
+              <label class="cobro-option-card" id="cardOpcionCobroAnticipado">
+                <input type="radio" name="tipoCobroCheque" value="ANTICIPADO">
+                <div class="cobro-option-title">⚡ Cobro Anticipado</div>
+                <div class="cobro-option-desc">Venta al banco antes de fecha (interés bancario)</div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Opción 1: Impuesto al Cheque (%) -->
+          <div id="boxCobroEnFecha" class="form-group" style="margin-bottom: 16px;">
+            <label class="form-label" for="inputCobroImpuesto">Impuesto al Cheque Cobrado por el Banco (%) *</label>
+            <div style="position: relative;">
+              <input type="number" id="inputCobroImpuesto" step="0.01" min="0" max="100" value="1.2" class="form-control" style="font-size: 1.05rem; font-weight: 700; padding-right: 36px;">
+              <span style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--text-dim);">%</span>
+            </div>
+            <span style="font-size: 0.74rem; color: var(--text-dim); margin-top: 2px;">
+              Porcentaje retenido por el banco al acreditar el cheque en fecha (por defecto 1,2%).
+            </span>
+          </div>
+
+          <!-- Opción 2: Tasa de Descuento por Venta al Banco (1% a 30% con medios) -->
+          <div id="boxCobroAnticipado" class="form-group" style="margin-bottom: 16px; display: none;">
+            <label class="form-label" for="selectCobroTasaBanco">Tasa de Interés Cobrada por el Banco (%) *</label>
+            <select id="selectCobroTasaBanco" class="form-control" style="font-size: 1.05rem; font-weight: 700;">
+              <!-- Opciones 1% a 30% de a 0,5% -->
+            </select>
+            <span style="font-size: 0.74rem; color: var(--text-dim); margin-top: 2px;">
+              Interés que te descuenta el banco por comprar/adelantar el cheque antes de su fecha.
+            </span>
+          </div>
+
+          <!-- Vista Previa Financiera del Cobro -->
+          <div class="cobro-calc-preview">
+            <div class="cobro-calc-row">
+              <span>Importe Nominal del Cheque:</span>
+              <strong id="cobroPreviewNominal" style="color: #fff;">$ 0,00</strong>
+            </div>
+            <div class="cobro-calc-row">
+              <span id="cobroPreviewDescuentoLabel">Descuento Bancario (1,2%):</span>
+              <strong id="cobroPreviewDescuentoMonto" style="color: var(--accent-rose);">-$ 0,00</strong>
+            </div>
+            <div class="cobro-calc-row">
+              <span>Neto Acreditado por el Banco:</span>
+              <strong id="cobroPreviewNetoBanco" style="color: var(--primary);">$ 0,00</strong>
+            </div>
+            <div class="cobro-calc-row total">
+              <span>Ganancia Neta Final del Cheque:</span>
+              <strong id="cobroPreviewGananciaFinal" style="color: var(--accent-emerald);">+$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="CarteraModule.cerrarModalCobrar()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-emerald" style="font-weight: 700;">
+            Confirmar Cobro
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
   <!-- MODAL: RECHAZO DE CHEQUE (Motivo Opcional) -->
   <!-- ========================================== -->
   <div id="modalRechazoCheque" class="modal-overlay">
@@ -962,13 +1053,13 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=2.7.0"></script>
-  <script src="/js/notifications.js?v=2.7.0"></script>
-  <script src="/js/dashboard.js?v=2.7.0"></script>
-  <script src="/js/ingreso.js?v=2.7.0"></script>
-  <script src="/js/cartera.js?v=2.7.0"></script>
-  <script src="/js/entregados.js?v=2.7.0"></script>
-  <script src="/js/clientes.js?v=2.7.0"></script>
-  <script src="/js/app.js?v=2.7.0"></script>
+  <script src="/js/api.js?v=2.8.0"></script>
+  <script src="/js/notifications.js?v=2.8.0"></script>
+  <script src="/js/dashboard.js?v=2.8.0"></script>
+  <script src="/js/ingreso.js?v=2.8.0"></script>
+  <script src="/js/cartera.js?v=2.8.0"></script>
+  <script src="/js/entregados.js?v=2.8.0"></script>
+  <script src="/js/clientes.js?v=2.8.0"></script>
+  <script src="/js/app.js?v=2.8.0"></script>
 </body>
 </html>

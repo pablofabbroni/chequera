@@ -6,6 +6,7 @@ const IngresoModule = {
   clientes: [],
 
   async init() {
+    this.poblarSelectTasas();
     this.resetFechas();
     await this.cargarComboClientes();
 
@@ -25,9 +26,20 @@ const IngresoModule = {
     const fechaCobroInput = document.getElementById('inputFechaCobro');
 
     if (importeInput) importeInput.addEventListener('input', () => this.calcularEnVivo());
-    if (tasaInput) tasaInput.addEventListener('input', () => this.calcularEnVivo());
+    if (tasaInput) {
+      tasaInput.addEventListener('change', () => this.calcularEnVivo());
+      tasaInput.addEventListener('input', () => this.calcularEnVivo());
+    }
     if (fechaRecepInput) fechaRecepInput.addEventListener('change', () => this.calcularEnVivo());
     if (fechaCobroInput) fechaCobroInput.addEventListener('change', () => this.calcularEnVivo());
+
+    form.addEventListener('reset', () => {
+      setTimeout(() => {
+        if (tasaInput) tasaInput.value = '5';
+        this.resetFechas();
+        this.calcularEnVivo();
+      }, 10);
+    });
 
     // Banco selector custom
     const bancoSelect = document.getElementById('selectBanco');
@@ -72,6 +84,19 @@ const IngresoModule = {
 
     // Ejecutar cálculo inicial
     this.calcularEnVivo();
+  },
+
+  poblarSelectTasas() {
+    const tasaSelect = document.getElementById('inputTasa');
+    if (!tasaSelect || tasaSelect.options.length > 0) return;
+
+    const opciones = [];
+    for (let t = 1; t <= 30; t += 0.5) {
+      const label = Number.isInteger(t) ? `${t} %` : `${String(t).replace('.', ',')} %`;
+      const selected = t === 5 ? 'selected' : '';
+      opciones.push(`<option value="${t}" ${selected}>${label}</option>`);
+    }
+    tasaSelect.innerHTML = opciones.join('');
   },
 
   async cargarComboClientes(clienteASeleccionar = null) {
@@ -235,6 +260,8 @@ const IngresoModule = {
 
       // Limpiar formulario y resetear valores
       document.getElementById('formIngresoCheque').reset();
+      const tasaSelect = document.getElementById('inputTasa');
+      if (tasaSelect) tasaSelect.value = '5';
       this.resetFechas();
       this.calcularEnVivo();
 

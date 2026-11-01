@@ -76,6 +76,43 @@ const CarteraModule = {
     if (formRechazo) {
       formRechazo.onsubmit = (e) => this.handleConfirmarRechazo(e);
     }
+
+    // Modal Cobro Form y Controles Reactivos
+    this.poblarSelectTasaBanco();
+    const formCobro = document.getElementById('formCobrarCheque');
+    if (formCobro) {
+      formCobro.onsubmit = (e) => this.handleConfirmarCobro(e);
+    }
+
+    const radiosCobro = document.querySelectorAll('input[name="tipoCobroCheque"]');
+    radiosCobro.forEach(radio => {
+      radio.addEventListener('change', () => this.actualizarVistaTipoCobro());
+    });
+
+    const inputImpuesto = document.getElementById('inputCobroImpuesto');
+    if (inputImpuesto) {
+      inputImpuesto.addEventListener('input', () => this.actualizarCalculoCobroEnVivo());
+      inputImpuesto.addEventListener('change', () => this.actualizarCalculoCobroEnVivo());
+    }
+
+    const selectTasaBanco = document.getElementById('selectCobroTasaBanco');
+    if (selectTasaBanco) {
+      selectTasaBanco.addEventListener('change', () => this.actualizarCalculoCobroEnVivo());
+      selectTasaBanco.addEventListener('input', () => this.actualizarCalculoCobroEnVivo());
+    }
+  },
+
+  poblarSelectTasaBanco() {
+    const select = document.getElementById('selectCobroTasaBanco');
+    if (!select || select.options.length > 0) return;
+
+    const opciones = [];
+    for (let t = 1; t <= 30; t += 0.5) {
+      const label = Number.isInteger(t) ? `${t} %` : `${String(t).replace('.', ',')} %`;
+      const selected = t === 3 ? 'selected' : '';
+      opciones.push(`<option value="${t}" ${selected}>${label}</option>`);
+    }
+    select.innerHTML = opciones.join('');
   },
 
   async cargarComboClientes() {
@@ -218,33 +255,49 @@ const CarteraModule = {
               <div style="font-weight: 700; font-family: 'Outfit', sans-serif; font-size: 1.05rem; color: #fff;">
                 ${formatARS(c.importe)}
               </div>
-              <div style="font-size: 0.78rem; color: var(--accent-emerald); font-weight: 600;">
-                +${formatARS(c.interes_cobrado)} (${c.tasa_interes}%)
-              </div>
-              <div style="font-size: 0.72rem; color: var(--text-dim);">
-                Saliente: ${formatARS(c.dinero_saliente)}
-              </div>
+              ${c.estado === 'Cobrado' && Number(c.descuento_banco) > 0 ? `
+                <div style="font-size: 0.76rem; color: var(--accent-emerald); font-weight: 700;">
+                  Neta: +${formatARS(Number(c.interes_cobrado) - Number(c.descuento_banco))}
+                </div>
+                <div style="font-size: 0.7rem; color: var(--accent-rose);">
+                  Desc. banco (${String(c.tasa_descuento_banco).replace('.', ',')}%): -${formatARS(c.descuento_banco)}
+                </div>
+              ` : `
+                <div style="font-size: 0.78rem; color: var(--accent-emerald); font-weight: 600;">
+                  +${formatARS(c.interes_cobrado)} (${String(c.tasa_interes).replace('.', ',')}%)
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim);">
+                  Saliente: ${formatARS(c.dinero_saliente)}
+                </div>
+              `}
             </td>
 
-            <!-- Columna 5: Acciones (ÚNICAS 2 OPCIONES: Cobrado y Rechazado) -->
+            <!-- Columna 5: Acciones Uniformes (Cobrado, Entregar, Rechazado, Eliminar) -->
             <td>
               ${c.estado === 'Pendiente' ? `
-                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                  <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" title="Marcar como Cobrado">
+                <div class="table-actions-grid">
+                  <button class="btn-action cobrar" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" title="Registrar Cobro">
                     Cobrado
                   </button>
-                  <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" title="Marcar como Rechazado">
+                  <button class="btn-action entregar" onclick="EntregadosModule.abrirModalEntregaConCheque(${c.id})" title="Entregar Cheque a Tercero">
+                    Entregar
+                  </button>
+                  <button class="btn-action rechazar" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" title="Marcar como Rechazado">
                     Rechazado
                   </button>
-                  <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); width: 28px; height: 28px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <button class="btn-action eliminar" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar Cheque">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Eliminar</span>
                   </button>
                 </div>
               ` : `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span class="badge-status ${estadoClass}">● ${c.estado}</span>
-                  ${c.motivo_rechazo ? `<div style="font-size: 0.72rem; color: var(--accent-rose);">Motivo: ${c.motivo_rechazo}</div>` : ''}
-                  <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); width: 28px; height: 28px; margin-left: auto;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <div>
+                    <span class="badge-status ${estadoClass}">● ${c.estado}</span>
+                    ${c.estado === 'Cobrado' && c.tipo_cobro ? `<div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">${c.tipo_cobro === 'ANTICIPADO' ? 'Cobro anticipado' : 'Cobro en fecha'}</div>` : ''}
+                    ${c.motivo_rechazo ? `<div style="font-size: 0.72rem; color: var(--accent-rose);">Motivo: ${c.motivo_rechazo}</div>` : ''}
+                  </div>
+                  <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); width: 30px; height: 30px; margin-left: auto;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                   </button>
                 </div>
@@ -290,8 +343,13 @@ const CarteraModule = {
                 <div class="card-amount-main">${formatARS(c.importe)}</div>
               </div>
               <div class="card-amount-details">
-                <span style="color: var(--accent-emerald); font-weight: 700;">+${formatARS(c.interes_cobrado)} (${c.tasa_interes}%)</span>
-                <span style="color: var(--text-dim);">Saliente: ${formatARS(c.dinero_saliente)}</span>
+                ${c.estado === 'Cobrado' && Number(c.descuento_banco) > 0 ? `
+                  <span style="color: var(--accent-emerald); font-weight: 700;">Neta: +${formatARS(Number(c.interes_cobrado) - Number(c.descuento_banco))}</span>
+                  <span style="color: var(--accent-rose); font-size: 0.72rem;">Desc. banco (${String(c.tasa_descuento_banco).replace('.', ',')}%): -${formatARS(c.descuento_banco)}</span>
+                ` : `
+                  <span style="color: var(--accent-emerald); font-weight: 700;">+${formatARS(c.interes_cobrado)} (${String(c.tasa_interes).replace('.', ',')}%)</span>
+                  <span style="color: var(--text-dim);">Saliente: ${formatARS(c.dinero_saliente)}</span>
+                `}
               </div>
             </div>
 
@@ -306,13 +364,16 @@ const CarteraModule = {
 
             ${c.estado === 'Pendiente' ? `
               <div class="card-actions-row">
-                <button class="btn btn-emerald btn-sm" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+                <button class="btn-action cobrar" onclick="CarteraModule.modalCobrar(${c.id}, '${c.numero}')">
                   Cobrado
                 </button>
-                <button class="btn btn-danger btn-sm" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" style="flex: 1; padding: 10px; font-weight: 700;">
+                <button class="btn-action entregar" onclick="EntregadosModule.abrirModalEntregaConCheque(${c.id})">
+                  Entregar
+                </button>
+                <button class="btn-action rechazar" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')">
                   Rechazado
                 </button>
-                <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose);">
+                <button class="btn-icon-uniform" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
               </div>
@@ -332,17 +393,149 @@ const CarteraModule = {
     }
   },
 
-  // Modal para Marcar como Cobrado
-  modalCobrar(id, numero) {
-    if (confirm(`¿Confirma cambiar estado a COBRADO para el Cheque N° ${numero}?`)) {
-      this.ejecutarCambioEstado(id, 'Cobrado');
+  chequeCobroActual: null,
+
+  // Modal para Marcar como Cobrado (2 opciones: En Fecha con Impuesto o Anticipado con Tasa Bancaria)
+  async modalCobrar(id, numero) {
+    if (!this.initialized) {
+      this.bindEvents();
+      this.initialized = true;
     }
+    this.poblarSelectTasaBanco();
+
+    let ch = this.cheques.find(c => c.id === id);
+    if (!ch) {
+      try {
+        const res = await API.get(`/cheques/${id}`);
+        ch = res.cheque;
+      } catch (e) {
+        showToast('No se pudo obtener la información del cheque.', 'error');
+        return;
+      }
+    }
+
+    this.chequeCobroActual = ch;
+    const modal = document.getElementById('modalCobrarCheque');
+    const resumenBox = document.getElementById('cobroChequeResumenBox');
+    if (!modal) return;
+
+    if (resumenBox) {
+      resumenBox.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <div style="font-size: 0.92rem; color: #fff; font-weight: 700;">
+              Cheque #${ch.numero} • <span style="color: var(--primary);">${ch.banco}</span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              Emisor: ${ch.emisor} | Cobro: ${formatFecha(ch.fecha_cobro)}
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 1.05rem; font-weight: 700; color: #fff; font-family: 'Outfit', sans-serif;">
+              ${formatARS(ch.importe)}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--accent-emerald); font-weight: 600;">
+              Interés cliente: +${formatARS(ch.interes_cobrado)} (${String(ch.tasa_interes).replace('.', ',')}%)
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Resetear a opción por defecto: EN_FECHA con 1.2%
+    const radioFecha = document.querySelector('input[name="tipoCobroCheque"][value="EN_FECHA"]');
+    if (radioFecha) radioFecha.checked = true;
+    const inputImpuesto = document.getElementById('inputCobroImpuesto');
+    if (inputImpuesto) inputImpuesto.value = '1.2';
+    const selectTasa = document.getElementById('selectCobroTasaBanco');
+    if (selectTasa) selectTasa.value = '3';
+
+    this.actualizarVistaTipoCobro();
+    modal.classList.add('show');
+  },
+
+  actualizarVistaTipoCobro() {
+    const tipo = document.querySelector('input[name="tipoCobroCheque"]:checked')?.value || 'EN_FECHA';
+    const cardFecha = document.getElementById('cardOpcionCobroFecha');
+    const cardAnticipado = document.getElementById('cardOpcionCobroAnticipado');
+    const boxFecha = document.getElementById('boxCobroEnFecha');
+    const boxAnticipado = document.getElementById('boxCobroAnticipado');
+
+    if (cardFecha) cardFecha.classList.toggle('active', tipo === 'EN_FECHA');
+    if (cardAnticipado) cardAnticipado.classList.toggle('active', tipo === 'ANTICIPADO');
+    if (boxFecha) boxFecha.style.display = tipo === 'EN_FECHA' ? 'flex' : 'none';
+    if (boxAnticipado) boxAnticipado.style.display = tipo === 'ANTICIPADO' ? 'flex' : 'none';
+
+    this.actualizarCalculoCobroEnVivo();
+  },
+
+  actualizarCalculoCobroEnVivo() {
+    const ch = this.chequeCobroActual;
+    if (!ch) return;
+
+    const tipo = document.querySelector('input[name="tipoCobroCheque"]:checked')?.value || 'EN_FECHA';
+    let tasaBanco = 0;
+    if (tipo === 'EN_FECHA') {
+      tasaBanco = parseFloat(document.getElementById('inputCobroImpuesto')?.value) || 0;
+    } else {
+      tasaBanco = parseFloat(document.getElementById('selectCobroTasaBanco')?.value) || 0;
+    }
+
+    const importe = Number(ch.importe) || 0;
+    const interesCliente = Number(ch.interes_cobrado) || 0;
+    const descuentoBanco = Math.round((importe * (tasaBanco / 100)) * 100) / 100;
+    const netoAcreditado = Math.round((importe - descuentoBanco) * 100) / 100;
+    const gananciaFinal = Math.round((interesCliente - descuentoBanco) * 100) / 100;
+
+    const lblNominal = document.getElementById('cobroPreviewNominal');
+    const lblDescLabel = document.getElementById('cobroPreviewDescuentoLabel');
+    const lblDescMonto = document.getElementById('cobroPreviewDescuentoMonto');
+    const lblNeto = document.getElementById('cobroPreviewNetoBanco');
+    const lblGanancia = document.getElementById('cobroPreviewGananciaFinal');
+
+    const tasaTexto = String(tasaBanco).replace('.', ',');
+    if (lblNominal) lblNominal.textContent = formatARS(importe);
+    if (lblDescLabel) {
+      lblDescLabel.textContent = tipo === 'EN_FECHA'
+        ? `Impuesto al Cheque (${tasaTexto}%):`
+        : `Interés Bancario Descuento (${tasaTexto}%):`;
+    }
+    if (lblDescMonto) lblDescMonto.textContent = `-${formatARS(descuentoBanco)}`;
+    if (lblNeto) lblNeto.textContent = formatARS(netoAcreditado);
+    if (lblGanancia) {
+      lblGanancia.textContent = `${gananciaFinal >= 0 ? '+' : ''}${formatARS(gananciaFinal)}`;
+      lblGanancia.style.color = gananciaFinal >= 0 ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+    }
+  },
+
+  cerrarModalCobrar() {
+    const modal = document.getElementById('modalCobrarCheque');
+    if (modal) modal.classList.remove('show');
+    this.chequeCobroActual = null;
+  },
+
+  handleConfirmarCobro(e) {
+    e.preventDefault();
+    if (!this.chequeCobroActual) return;
+
+    const id = this.chequeCobroActual.id;
+    const tipoCobro = document.querySelector('input[name="tipoCobroCheque"]:checked')?.value || 'EN_FECHA';
+    const tasaDescuentoBanco = tipoCobro === 'EN_FECHA'
+      ? (parseFloat(document.getElementById('inputCobroImpuesto')?.value) || 0)
+      : (parseFloat(document.getElementById('selectCobroTasaBanco')?.value) || 0);
+
+    this.cerrarModalCobrar();
+    this.ejecutarCambioEstado(id, 'Cobrado', null, tipoCobro, tasaDescuentoBanco);
   },
 
   chequeRechazoId: null,
 
   // Modal para Marcar como Rechazado (Motivo Opcional)
   modalRechazar(id, numero) {
+    if (!this.initialized) {
+      this.bindEvents();
+      this.initialized = true;
+    }
     this.chequeRechazoId = id;
     const modal = document.getElementById('modalRechazoCheque');
     const input = document.getElementById('rechazoMotivoInput');
@@ -370,14 +563,19 @@ const CarteraModule = {
     this.ejecutarCambioEstado(id, 'Rechazado', motivo);
   },
 
-  async ejecutarCambioEstado(id, nuevoEstado, motivoRechazo = null) {
+  async ejecutarCambioEstado(id, nuevoEstado, motivoRechazo = null, tipoCobro = null, tasaDescuentoBanco = 0) {
     try {
       const res = await API.patch(`/cheques/${id}/estado`, {
         nuevoEstado,
-        motivoRechazo
+        motivoRechazo,
+        tipoCobro,
+        tasaDescuentoBanco
       });
       showToast(res.mensaje, 'success');
       this.cargarCheques();
+      if (typeof DashboardModule !== 'undefined' && DashboardModule.initialized) {
+        DashboardModule.cargarMetricas();
+      }
     } catch (error) {
       showToast(error.message, 'error');
     }
@@ -399,7 +597,12 @@ const CarteraModule = {
     try {
       const res = await API.get(`/cheques/${id}`);
       const ch = res.cheque;
-      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés: ${formatARS(ch.interes_cobrado)}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
+      const descBanco = Number(ch.descuento_banco) || 0;
+      const gananciaNeta = Math.round(((Number(ch.interes_cobrado) || 0) - descBanco) * 100) / 100;
+      const infoCobro = ch.estado === 'Cobrado'
+        ? `\nModalidad Cobro: ${ch.tipo_cobro === 'ANTICIPADO' ? 'Anticipado (Venta al banco)' : 'En fecha (Impuesto al cheque)'}\nDescuento Banco (${ch.tasa_descuento_banco || 0}%): -${formatARS(descBanco)}\nGanancia Neta Final: ${formatARS(gananciaNeta)}`
+        : '';
+      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
     } catch (e) {
       showToast(e.message, 'error');
     }

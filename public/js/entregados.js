@@ -215,6 +215,10 @@ const EntregadosModule = {
   },
 
   async abrirModalEntrega() {
+    if (!this.initialized) {
+      this.bindEvents();
+      this.initialized = true;
+    }
     const modal = document.getElementById('modalEntregarCheque');
     const select = document.getElementById('selectChequeParaEntregar');
     const inputFecha = document.getElementById('inputFechaEntrega');
@@ -284,6 +288,12 @@ const EntregadosModule = {
       document.getElementById('modalEntregarCheque').classList.remove('show');
       document.getElementById('formEntregarCheque').reset();
       this.cargarEntregados();
+      if (typeof CarteraModule !== 'undefined' && CarteraModule.initialized) {
+        CarteraModule.cargarCheques();
+      }
+      if (typeof DashboardModule !== 'undefined' && DashboardModule.initialized) {
+        DashboardModule.cargarMetricas();
+      }
     } catch (error) {
       showToast(error.message, 'error');
     }
@@ -295,6 +305,12 @@ const EntregadosModule = {
         const res = await API.delete(`/entregas/${entregaId}`);
         showToast(res.mensaje, 'success');
         this.cargarEntregados();
+        if (typeof CarteraModule !== 'undefined' && CarteraModule.initialized) {
+          CarteraModule.cargarCheques();
+        }
+        if (typeof DashboardModule !== 'undefined' && DashboardModule.initialized) {
+          DashboardModule.cargarMetricas();
+        }
       } catch (error) {
         showToast(error.message, 'error');
       }

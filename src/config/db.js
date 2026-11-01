@@ -88,6 +88,10 @@ async function initDB() {
         dinero_saliente DECIMAL(15, 2) NOT NULL,
         estado ENUM('Pendiente', 'Cobrado', 'Rechazado', 'Entregado') DEFAULT 'Pendiente',
         fecha_estado DATETIME NULL,
+        tipo_cobro VARCHAR(30) NULL,
+        tasa_descuento_banco DECIMAL(8, 2) DEFAULT 0.00,
+        descuento_banco DECIMAL(15, 2) DEFAULT 0.00,
+        monto_neto_cobrado DECIMAL(15, 2) NULL,
         motivo_rechazo TEXT NULL,
         notas TEXT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -96,6 +100,21 @@ async function initDB() {
         INDEX idx_fecha_cobro (fecha_cobro)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    // Migración segura para bases de datos existentes (columnas de opciones de cobro)
+    const alterColumns = [
+      "ADD COLUMN tipo_cobro VARCHAR(30) NULL AFTER fecha_estado",
+      "ADD COLUMN tasa_descuento_banco DECIMAL(8, 2) DEFAULT 0.00 AFTER tipo_cobro",
+      "ADD COLUMN descuento_banco DECIMAL(15, 2) DEFAULT 0.00 AFTER tasa_descuento_banco",
+      "ADD COLUMN monto_neto_cobrado DECIMAL(15, 2) NULL AFTER descuento_banco"
+    ];
+    for (const colSql of alterColumns) {
+      try {
+        await pool.query(`ALTER TABLE cheques ${colSql};`);
+      } catch (eAlter) {
+        // Ignorar si la columna ya existe
+      }
+    }
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS clientes (
