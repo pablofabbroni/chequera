@@ -31,7 +31,7 @@ function calcularMetricasCheque(cheque, hoy = new Date()) {
     } else if (diasParaCobro <= 0) {
       nivelAlerta = 'LISTO_COBRO';
       mensajeAlerta = diasParaCobro === 0 ? 'Fecha de cobro HOY.' : `Listo para cobrar (pasaron ${Math.abs(diasParaCobro)} días desde fecha de cobro).`;
-    } else if (diasParaCobro <= 3) {
+    } else if (diasParaCobro <= 5) {
       nivelAlerta = 'COBRO_CERCANO';
       mensajeAlerta = `Fecha de cobro en ${diasParaCobro} día(s).`;
     }
@@ -89,8 +89,8 @@ async function procesarAlertasAutomaticas() {
         }
       }
 
-      // Alerta de cobro cercano: fecha de cobro hoy o en 1 a 3 días
-      if (metricas.diasParaCobro >= 0 && metricas.diasParaCobro <= 3) {
+      // Alerta de cobro cercano: fecha de cobro hoy o en 1 a 5 días
+      if (metricas.diasParaCobro >= 0 && metricas.diasParaCobro <= 5) {
         const titulo = metricas.diasParaCobro === 0 
           ? `💰 Cobro disponible HOY: Cheque N° ${ch.numero}`
           : `📅 Cobro cercano en ${metricas.diasParaCobro} días: Cheque N° ${ch.numero}`;
