@@ -27,7 +27,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
-  <link rel="stylesheet" href="/css/app.css?v=2.8.0">
+  <link rel="stylesheet" href="/css/app.css?v=3.0.0">
 </head>
 <body>
 
@@ -100,6 +100,11 @@
         <a href="#entregados" class="nav-item">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           <span>Entregados (Salidas)</span>
+        </a>
+
+        <a href="#consultas" class="nav-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+          <span>Consultas BCRA</span>
         </a>
       </nav>
 
@@ -440,8 +445,14 @@
               <div class="form-grid">
                 <!-- N° Cheque -->
                 <div class="form-group">
-                  <label class="form-label" for="inputNumeroCheque">N° de Cheque *</label>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                    <label class="form-label" for="inputNumeroCheque" style="margin-bottom: 0;">N° de Cheque *</label>
+                    <button type="button" id="btnVerificarChequeBcra" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary); border-color: rgba(14, 165, 233, 0.4);" title="Verificar si el cheque está denunciado en BCRA">
+                      Verificar BCRA
+                    </button>
+                  </div>
                   <input type="text" id="inputNumeroCheque" class="form-control" placeholder="Ej: 00482910" required>
+                  <div id="ingresoDenunciadoStatus" class="bcra-inline-status" style="display: none;"></div>
                 </div>
 
                 <!-- Banco -->
@@ -449,19 +460,22 @@
                   <label class="form-label" for="selectBanco">Banco *</label>
                   <select id="selectBanco" class="form-control" required>
                     <option value="">-- Seleccionar Banco --</option>
-                    <option value="Banco Galicia">Banco Galicia</option>
-                    <option value="Banco Santander">Banco Santander</option>
-                    <option value="Banco BBVA">Banco BBVA</option>
-                    <option value="Banco Macro">Banco Macro</option>
-                    <option value="Banco Nación">Banco Nación</option>
-                    <option value="Banco Provincia">Banco Provincia</option>
-                    <option value="Banco Ciudad">Banco Ciudad</option>
-                    <option value="Banco Credicoop">Banco Credicoop</option>
-                    <option value="Banco ICBC">Banco ICBC</option>
-                    <option value="Banco HSBC">Banco HSBC</option>
-                    <option value="Banco Patagonia">Banco Patagonia</option>
-                    <option value="Banco Supervielle">Banco Supervielle</option>
-                    <option value="Banco Comafi">Banco Comafi</option>
+                    <optgroup label="Bancos Principales">
+                      <option value="Banco Galicia" data-codigo-bcra="7">Banco Galicia</option>
+                      <option value="Banco Santander" data-codigo-bcra="72">Banco Santander</option>
+                      <option value="Banco BBVA" data-codigo-bcra="17">Banco BBVA</option>
+                      <option value="Banco Macro" data-codigo-bcra="285">Banco Macro</option>
+                      <option value="Banco Nación" data-codigo-bcra="11">Banco Nación</option>
+                      <option value="Banco Provincia" data-codigo-bcra="14">Banco Provincia</option>
+                      <option value="Banco Ciudad" data-codigo-bcra="29">Banco Ciudad</option>
+                      <option value="Banco Credicoop" data-codigo-bcra="191">Banco Credicoop</option>
+                      <option value="Banco ICBC" data-codigo-bcra="15">Banco ICBC</option>
+                      <option value="Banco HSBC" data-codigo-bcra="150">Banco HSBC (GGAL)</option>
+                      <option value="Banco Patagonia" data-codigo-bcra="34">Banco Patagonia</option>
+                      <option value="Banco Supervielle" data-codigo-bcra="27">Banco Supervielle</option>
+                      <option value="Banco Comafi" data-codigo-bcra="299">Banco Comafi</option>
+                    </optgroup>
+                    <optgroup id="optGroupBancosBcra" label="Otras Entidades Oficiales (BCRA)"></optgroup>
                     <option value="OTRO">Otro banco...</option>
                   </select>
                   <input type="text" id="inputBancoOtro" class="form-control" placeholder="Escriba el nombre del banco" style="display: none; margin-top: 8px;">
@@ -471,6 +485,18 @@
                 <div class="form-group">
                   <label class="form-label" for="inputEmisor">Emisor del Cheque *</label>
                   <input type="text" id="inputEmisor" class="form-control" placeholder="Titular de la cuenta / Empresa" required>
+                </div>
+
+                <!-- CUIT del Emisor + Consulta BCRA -->
+                <div class="form-group">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                    <label class="form-label" for="inputCuitEmisor" style="margin-bottom: 0;">CUIT del Emisor *</label>
+                    <button type="button" id="btnConsultarCuitBcra" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary); border-color: rgba(14, 165, 233, 0.4);" title="Consultar Central de Deudores y Cheques Rechazados en BCRA">
+                      Consultar BCRA
+                    </button>
+                  </div>
+                  <input type="text" id="inputCuitEmisor" class="form-control" placeholder="Ej: 30-12345678-9 (11 dígitos)" maxlength="15" inputmode="numeric" required>
+                  <div id="ingresoCuitBcraBadge" class="bcra-inline-status" style="display: none;"></div>
                 </div>
 
                 <!-- Entregador del Cheque (Cliente) con creación rápida -->
@@ -735,6 +761,84 @@
           </div>
         </section>
 
+        <!-- ======================================================== -->
+        <!-- PÁGINA 5: CONSULTAS BCRA (Central de Deudores & Denunciados) -->
+        <!-- ======================================================== -->
+        <section id="pageConsultas" class="page-view" style="display: none;">
+          <div class="glass-card">
+            <div class="filter-bar" style="margin-bottom: 20px;">
+              <div>
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 700; color: #fff;">
+                  Consultas Oficiales BCRA
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
+                  Verificá situación crediticia, cheques rechazados por CUIT y cheques denunciados ante el Banco Central.
+                </p>
+              </div>
+
+              <!-- Subpestañas del Módulo -->
+              <div class="cartera-status-container bcra-subtabs">
+                <button type="button" class="btn btn-secondary btn-sm bcra-subtab active" data-tab="deudores">
+                  Central de Deudores (CUIT)
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm bcra-subtab" data-tab="denunciados">
+                  Cheques Denunciados
+                </button>
+              </div>
+            </div>
+
+            <!-- SUBPESTAÑA 1: CENTRAL DE DEUDORES -->
+            <div id="panelBcraDeudores" class="bcra-tab-panel">
+              <form id="formBcraDeudores" class="bcra-search-bar">
+                <div class="form-group" style="flex: 1; min-width: 220px;">
+                  <label class="form-label" for="inputBcraCuit">CUIT / CUIL / CDI (11 dígitos) *</label>
+                  <input type="text" id="inputBcraCuit" class="form-control" placeholder="Ej: 30-50001091-2 o 30500010912" maxlength="15" inputmode="numeric" required>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                  <button type="submit" id="btnBuscarBcraCuit" class="btn btn-primary" style="height: 44px; padding: 0 22px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <span>Consultar CUIT</span>
+                  </button>
+                </div>
+              </form>
+
+              <div id="bcraDeudoresResultado" style="margin-top: 20px;">
+                <div class="bcra-empty-hint">
+                  Ingresá un CUIT/CUIL/CDI de 11 dígitos para consultar la situación crediticia actual, historial de los últimos 24 meses y cheques rechazados en el BCRA.
+                </div>
+              </div>
+            </div>
+
+            <!-- SUBPESTAÑA 2: CHEQUES DENUNCIADOS -->
+            <div id="panelBcraDenunciados" class="bcra-tab-panel" style="display: none;">
+              <form id="formBcraDenunciados" class="bcra-search-bar">
+                <div class="form-group" style="flex: 1.2; min-width: 220px;">
+                  <label class="form-label" for="selectBcraBanco">Entidad Bancaria (BCRA) *</label>
+                  <select id="selectBcraBanco" class="form-control" required>
+                    <option value="">Cargando entidades del BCRA...</option>
+                  </select>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 180px;">
+                  <label class="form-label" for="inputBcraNumeroCheque">N° de Cheque *</label>
+                  <input type="text" id="inputBcraNumeroCheque" class="form-control" placeholder="Ej: 20377516" inputmode="numeric" required>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                  <button type="submit" id="btnBuscarBcraCheque" class="btn btn-primary" style="height: 44px; padding: 0 22px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <span>Verificar Cheque</span>
+                  </button>
+                </div>
+              </form>
+
+              <div id="bcraDenunciadosResultado" style="margin-top: 20px;">
+                <div class="bcra-empty-hint">
+                  Seleccioná el banco emisor e ingresá el número del cheque para consultar si posee denuncia por robo, extravío o adulteración ante el BCRA.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </main>
     </div>
 
@@ -757,6 +861,11 @@
       <a href="#entregados" class="mobile-nav-item">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         <span>Entregas</span>
+      </a>
+
+      <a href="#consultas" class="mobile-nav-item">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>BCRA</span>
       </a>
     </nav>
 
@@ -1055,17 +1164,48 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
+  <!-- MODAL: REPORTE BCRA DEL CUIT EMISOR -->
+  <!-- ========================================== -->
+  <div id="modalReporteBcraCuit" class="modal-overlay">
+    <div class="modal-card" style="max-width: 720px;">
+      <div class="modal-header">
+        <div>
+          <h3 style="color: #fff; font-size: 1.15rem; font-weight: 700;">Reporte BCRA del Emisor</h3>
+          <span id="modalBcraCuitSubtitulo" style="font-size: 0.78rem; color: var(--text-muted);">Central de Deudores y Cheques Rechazados</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalReporteBcraCuit').classList.remove('show')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body" id="modalReporteBcraCuitBody">
+        <!-- Inyectado dinámicamente -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnBcraUsarDenominacion" class="btn btn-secondary" style="display: none;">
+          Usar Razón Social como Emisor
+        </button>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('modalReporteBcraCuit').classList.remove('show')">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=2.8.0"></script>
-  <script src="/js/notifications.js?v=2.8.0"></script>
-  <script src="/js/dashboard.js?v=2.8.0"></script>
-  <script src="/js/ingreso.js?v=2.8.0"></script>
-  <script src="/js/cartera.js?v=2.8.0"></script>
-  <script src="/js/entregados.js?v=2.8.0"></script>
-  <script src="/js/clientes.js?v=2.8.0"></script>
-  <script src="/js/app.js?v=2.9.0"></script>
+  <script src="/js/api.js?v=3.0.0"></script>
+  <script src="/js/notifications.js?v=3.0.0"></script>
+  <script src="/js/dashboard.js?v=3.0.0"></script>
+  <script src="/js/consultas.js?v=3.0.0"></script>
+  <script src="/js/ingreso.js?v=3.0.0"></script>
+  <script src="/js/cartera.js?v=3.0.0"></script>
+  <script src="/js/entregados.js?v=3.0.0"></script>
+  <script src="/js/clientes.js?v=3.0.0"></script>
+  <script src="/js/app.js?v=3.0.0"></script>
 </body>
 </html>

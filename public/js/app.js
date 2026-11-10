@@ -229,6 +229,13 @@ const App = {
         EntregadosModule.init();
         break;
 
+      case 'consultas':
+        document.getElementById('pageConsultas').style.display = 'block';
+        if (pageTitle) pageTitle.textContent = 'Consultas BCRA';
+        if (pageSubtitle) pageSubtitle.textContent = 'Central de Deudores, cheques rechazados por CUIT y cheques denunciados';
+        ConsultasModule.init();
+        break;
+
       default:
         window.location.hash = '#dashboard';
         break;

@@ -4,11 +4,16 @@ const IngresoModule = {
   initialized: false,
   isSubmitting: false,
   clientes: [],
+  ultimoCuitConsultado: null,
+  ultimoReporteCuit: null,
+  ultimaConsultaChequeKey: null,
+  chequeTimer: null,
 
   async init() {
     this.poblarSelectTasas();
     this.resetFechas();
     await this.cargarComboClientes();
+    await this.cargarBancosAdicionalesBcra();
 
     if (this.initialized) {
       this.calcularEnVivo();
@@ -36,14 +41,18 @@ const IngresoModule = {
     form.addEventListener('reset', () => {
       setTimeout(() => {
         if (tasaInput) tasaInput.value = '5';
+        this.resetBcraStatus();
         this.resetFechas();
         this.calcularEnVivo();
       }, 10);
     });
 
-    // Banco selector custom
+    // Banco selector custom + verificación de cheque denunciado en BCRA
     const bancoSelect = document.getElementById('selectBanco');
     const bancoOtroInput = document.getElementById('inputBancoOtro');
+    const numChequeInput = document.getElementById('inputNumeroCheque');
+    const btnVerificarCheque = document.getElementById('btnVerificarChequeBcra');
+
     if (bancoSelect && bancoOtroInput) {
       bancoSelect.addEventListener('change', (e) => {
         if (e.target.value === 'OTRO') {
@@ -54,7 +63,41 @@ const IngresoModule = {
           bancoOtroInput.style.display = 'none';
           bancoOtroInput.required = false;
         }
+        this.programarVerificacionCheque(150);
       });
+    }
+
+    if (numChequeInput) {
+      numChequeInput.addEventListener('input', () => this.programarVerificacionCheque(650));
+      numChequeInput.addEventListener('blur', () => this.programarVerificacionCheque(50));
+    }
+
+    if (btnVerificarCheque) {
+      btnVerificarCheque.addEventListener('click', () => this.verificarChequeDenunciado(true));
+    }
+
+    // CUIT Emisor + Popup de reporte BCRA
+    const cuitInput = document.getElementById('inputCuitEmisor');
+    const btnConsultarCuit = document.getElementById('btnConsultarCuitBcra');
+    if (cuitInput) {
+      cuitInput.addEventListener('input', () => {
+        const clean = cuitInput.value.replace(/\D/g, '');
+        if (clean.length === 11 && clean !== this.ultimoCuitConsultado) {
+          this.consultarCuitBcra(true);
+        } else if (clean.length < 11) {
+          const badge = document.getElementById('ingresoCuitBcraBadge');
+          if (badge) badge.style.display = 'none';
+        }
+      });
+      cuitInput.addEventListener('blur', () => {
+        const clean = cuitInput.value.replace(/\D/g, '');
+        if (clean.length === 11 && clean !== this.ultimoCuitConsultado) {
+          this.consultarCuitBcra(true);
+        }
+      });
+    }
+    if (btnConsultarCuit) {
+      btnConsultarCuit.addEventListener('click', () => this.consultarCuitBcra(true, true));
     }
 
     // Cliente entregador: Cambio de desplegable
@@ -97,6 +140,202 @@ const IngresoModule = {
       opciones.push(`<option value="${t}" ${selected}>${label}</option>`);
     }
     tasaSelect.innerHTML = opciones.join('');
+  },
+
+  async cargarBancosAdicionalesBcra() {
+    const optGroup = document.getElementById('optGroupBancosBcra');
+    const selectBanco = document.getElementById('selectBanco');
+    if (!optGroup || !selectBanco || optGroup.children.length > 0) return;
+
+    try {
+      const entidades = await ConsultasModule.cargarEntidades();
+      const codigosExistentes = new Set(
+        Array.from(selectBanco.querySelectorAll('option[data-codigo-bcra]'))
+          .map(o => parseInt(o.dataset.codigoBcra, 10))
+      );
+
+      const extras = entidades.filter(e => !codigosExistentes.has(e.codigoEntidad));
+      optGroup.innerHTML = extras
+        .map(e => `<option value="${ConsultasModule.escapeHtml(e.denominacion)}" data-codigo-bcra="${e.codigoEntidad}">${ConsultasModule.escapeHtml(e.denominacion)}</option>`)
+        .join('');
+    } catch (e) {
+      console.warn('No se pudieron cargar entidades adicionales del BCRA:', e.message);
+    }
+  },
+
+  resetBcraStatus() {
+    this.ultimoCuitConsultado = null;
+    this.ultimoReporteCuit = null;
+    this.ultimaConsultaChequeKey = null;
+    const badgeCuit = document.getElementById('ingresoCuitBcraBadge');
+    const badgeCheque = document.getElementById('ingresoDenunciadoStatus');
+    if (badgeCuit) {
+      badgeCuit.style.display = 'none';
+      badgeCuit.innerHTML = '';
+    }
+    if (badgeCheque) {
+      badgeCheque.style.display = 'none';
+      badgeCheque.innerHTML = '';
+    }
+  },
+
+  programarVerificacionCheque(delay = 500) {
+    clearTimeout(this.chequeTimer);
+    this.chequeTimer = setTimeout(() => {
+      this.verificarChequeDenunciado(false);
+    }, delay);
+  },
+
+  async verificarChequeDenunciado(esManual = false) {
+    const numEl = document.getElementById('inputNumeroCheque');
+    const bancoEl = document.getElementById('selectBanco');
+    const statusEl = document.getElementById('ingresoDenunciadoStatus');
+    if (!numEl || !bancoEl || !statusEl) return;
+
+    const numeroCheque = numEl.value.replace(/\D/g, '');
+    const selectedOpt = bancoEl.options[bancoEl.selectedIndex];
+    const codigoEntidad = selectedOpt?.dataset?.codigoBcra || '';
+    const bancoNombre = bancoEl.value;
+
+    if (!numeroCheque || !bancoNombre || bancoNombre === 'OTRO') {
+      if (esManual) {
+        if (!numeroCheque) {
+          showToast('Ingresá un N° de cheque numérico para verificar.', 'warning');
+        } else {
+          showToast('Seleccioná un banco de la lista oficial para verificar en BCRA.', 'warning');
+        }
+      } else {
+        statusEl.style.display = 'none';
+      }
+      return;
+    }
+
+    const key = `${codigoEntidad || bancoNombre}:${numeroCheque}`;
+    if (!esManual && key === this.ultimaConsultaChequeKey) return;
+    this.ultimaConsultaChequeKey = key;
+
+    statusEl.style.display = 'flex';
+    statusEl.className = 'bcra-inline-status loading';
+    statusEl.innerHTML = '<span>⏳ Verificando en BCRA...</span>';
+
+    try {
+      const params = new URLSearchParams({ numeroCheque });
+      if (codigoEntidad) params.append('codigoEntidad', codigoEntidad);
+      else params.append('banco', bancoNombre);
+
+      const res = await API.get(`/bcra/cheques-denunciados?${params.toString()}`);
+      if (!res.servicioDisponible) {
+        statusEl.className = 'bcra-inline-status warn';
+        statusEl.innerHTML = '<span>⚠️ BCRA sin conexión temporalmente</span>';
+        return;
+      }
+
+      if (res.denunciado) {
+        const causal = res.detalles?.[0]?.causal || 'Denunciado';
+        statusEl.className = 'bcra-inline-status danger';
+        statusEl.innerHTML = `<span>🚨 <strong>¡DENUNCIADO EN BCRA!</strong> (${ConsultasModule.escapeHtml(causal)})</span>`;
+        showToast(`¡ALERTA! El cheque #${numeroCheque} figura DENUNCIADO en el BCRA (${causal}).`, 'error');
+      } else {
+        statusEl.className = 'bcra-inline-status ok';
+        statusEl.innerHTML = '<span>✅ Sin denuncia registrada en BCRA</span>';
+      }
+    } catch (error) {
+      statusEl.className = 'bcra-inline-status warn';
+      statusEl.innerHTML = `<span>⚠️ ${ConsultasModule.escapeHtml(error.message)}</span>`;
+    }
+  },
+
+  async consultarCuitBcra(abrirPopup = true, forzar = false) {
+    const cuitInput = document.getElementById('inputCuitEmisor');
+    const badgeEl = document.getElementById('ingresoCuitBcraBadge');
+    if (!cuitInput) return;
+
+    const cuit = cuitInput.value.replace(/\D/g, '');
+    if (!/^\d{11}$/.test(cuit)) {
+      if (forzar) {
+        showToast('El CUIT del Emisor debe tener exactamente 11 dígitos.', 'error');
+        cuitInput.focus();
+      }
+      return;
+    }
+
+    if (!forzar && cuit === this.ultimoCuitConsultado && this.ultimoReporteCuit) {
+      if (abrirPopup) this.abrirPopupReporteCuit(this.ultimoReporteCuit);
+      return;
+    }
+
+    this.ultimoCuitConsultado = cuit;
+    if (badgeEl) {
+      badgeEl.style.display = 'flex';
+      badgeEl.className = 'bcra-inline-status loading';
+      badgeEl.innerHTML = '<span>⏳ Consultando BCRA...</span>';
+    }
+
+    try {
+      const data = await API.get(`/bcra/deudores/${cuit}`);
+      this.ultimoReporteCuit = data;
+
+      if (badgeEl) {
+        const nivel = data.evaluacion?.nivel || 'LIMPIO';
+        let cls = 'ok';
+        let txt = '✅ Situación Normal en BCRA';
+        if (nivel === 'CRITICO') {
+          cls = 'danger';
+          txt = '🚨 ALERTA CRÍTICA en BCRA';
+        } else if (nivel === 'PRECAUCION') {
+          cls = 'warn';
+          txt = '⚠️ Precaución: Antecedentes en BCRA';
+        } else if (nivel === 'NO_DISPONIBLE') {
+          cls = 'warn';
+          txt = '⚠️ BCRA no disponible temporalmente';
+        }
+        badgeEl.className = `bcra-inline-status ${cls}`;
+        badgeEl.innerHTML = `
+          <span>${txt}</span>
+          <button type="button" class="bcra-inline-link" onclick="IngresoModule.abrirPopupReporteCuit(IngresoModule.ultimoReporteCuit)">Ver reporte</button>
+        `;
+      }
+
+      if (abrirPopup) {
+        this.abrirPopupReporteCuit(data);
+      }
+    } catch (error) {
+      if (badgeEl) {
+        badgeEl.className = 'bcra-inline-status warn';
+        badgeEl.innerHTML = `<span>⚠️ No se pudo consultar BCRA</span>`;
+      }
+    }
+  },
+
+  abrirPopupReporteCuit(data) {
+    if (!data) return;
+    const modal = document.getElementById('modalReporteBcraCuit');
+    const body = document.getElementById('modalReporteBcraCuitBody');
+    const subtitulo = document.getElementById('modalBcraCuitSubtitulo');
+    const btnUsarDenom = document.getElementById('btnBcraUsarDenominacion');
+    if (!modal || !body) return;
+
+    if (subtitulo) {
+      subtitulo.textContent = `CUIT ${data.cuitFormateado}${data.denominacion ? ` • ${data.denominacion}` : ''}`;
+    }
+
+    body.innerHTML = ConsultasModule.renderReporteDeudoresHTML(data, { compacto: true });
+
+    if (btnUsarDenom) {
+      if (data.denominacion) {
+        btnUsarDenom.style.display = 'inline-flex';
+        btnUsarDenom.onclick = () => {
+          const inputEmisor = document.getElementById('inputEmisor');
+          if (inputEmisor) inputEmisor.value = data.denominacion;
+          modal.classList.remove('show');
+          showToast('Razón social copiada al campo Emisor.', 'success');
+        };
+      } else {
+        btnUsarDenom.style.display = 'none';
+      }
+    }
+
+    modal.classList.add('show');
   },
 
   async cargarComboClientes(clienteASeleccionar = null) {
@@ -243,10 +482,19 @@ const IngresoModule = {
       const bancoOtro = document.getElementById('inputBancoOtro');
       const banco = bancoSelect.value === 'OTRO' ? bancoOtro.value.trim() : bancoSelect.value;
 
+      const cuitRaw = document.getElementById('inputCuitEmisor')?.value || '';
+      const cuitDigitos = cuitRaw.replace(/\D/g, '');
+      if (!/^\d{11}$/.test(cuitDigitos)) {
+        showToast('El CUIT del Emisor es obligatorio y debe tener 11 dígitos.', 'error');
+        document.getElementById('inputCuitEmisor')?.focus();
+        return;
+      }
+
       const payload = {
         numero: document.getElementById('inputNumeroCheque').value.trim(),
         banco: banco,
         emisor: document.getElementById('inputEmisor').value.trim(),
+        cuit_emisor: cuitDigitos,
         entregador: entregador,
         fecha_recepcion: document.getElementById('inputFechaRecepcion').value,
         fecha_cobro: document.getElementById('inputFechaCobro').value,
@@ -262,6 +510,7 @@ const IngresoModule = {
       document.getElementById('formIngresoCheque').reset();
       const tasaSelect = document.getElementById('inputTasa');
       if (tasaSelect) tasaSelect.value = '5';
+      this.resetBcraStatus();
       this.resetFechas();
       this.calcularEnVivo();
 

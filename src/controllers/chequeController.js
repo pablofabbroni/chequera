@@ -1,6 +1,7 @@
 const xlsx = require('xlsx');
 const { getPool } = require('../config/db');
 const { calcularMetricasCheque } = require('../services/alertService');
+const { normalizarCuit, formatearCuit } = require('../services/bcraService');
 
 /**
  * Ingresar nuevo cheque con cálculo automático de interés y dinero saliente
@@ -11,6 +12,7 @@ async function crearCheque(req, res) {
       numero,
       banco,
       emisor,
+      cuit_emisor,
       entregador,
       fecha_recepcion,
       fecha_cobro,
@@ -19,9 +21,15 @@ async function crearCheque(req, res) {
       notas
     } = req.body;
 
-    if (!numero || !banco || !emisor || !entregador || !fecha_recepcion || !fecha_cobro) {
+    if (!numero || !banco || !emisor || !cuit_emisor || !entregador || !fecha_recepcion || !fecha_cobro) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben completarse.' });
     }
+
+    const cuitLimpio = normalizarCuit(cuit_emisor);
+    if (!cuitLimpio) {
+      return res.status(400).json({ error: 'El CUIT del Emisor debe tener exactamente 11 dígitos numéricos.' });
+    }
+    const cuitFormateado = formatearCuit(cuitLimpio);
 
     const numImporte = parseFloat(importe);
     const numTasa = parseFloat(tasa_interes);
@@ -55,13 +63,14 @@ async function crearCheque(req, res) {
 
     const [result] = await pool.query(
       `INSERT INTO cheques 
-        (usuario_id, numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
+        (usuario_id, numero, banco, emisor, cuit_emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
       [
         usuarioId,
         numero.trim(),
         banco.trim(),
         emisor.trim(),
+        cuitFormateado,
         entregador.trim(),
         fecha_recepcion,
         fecha_cobro,
@@ -128,8 +137,8 @@ async function obtenerCartera(req, res) {
     }
 
     if (search) {
-      query += ' AND (numero LIKE ? OR emisor LIKE ? OR entregador LIKE ? OR banco LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      query += ' AND (numero LIKE ? OR emisor LIKE ? OR cuit_emisor LIKE ? OR entregador LIKE ? OR banco LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     // Ordenamiento seguro
@@ -275,6 +284,7 @@ async function actualizarCheque(req, res) {
       numero,
       banco,
       emisor,
+      cuit_emisor,
       entregador,
       fecha_recepcion,
       fecha_cobro,
@@ -282,6 +292,9 @@ async function actualizarCheque(req, res) {
       tasa_interes,
       notas
     } = req.body;
+
+    const cuitNorm = cuit_emisor ? normalizarCuit(cuit_emisor) : null;
+    const cuitVal = cuitNorm ? formatearCuit(cuitNorm) : (cuit_emisor ? cuit_emisor.trim() : null);
 
     const numImporte = parseFloat(importe);
     const numTasa = parseFloat(tasa_interes);
@@ -293,10 +306,10 @@ async function actualizarCheque(req, res) {
     const usuarioId = req.user.id;
     const [upd] = await pool.query(
       `UPDATE cheques 
-       SET numero = ?, banco = ?, emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
+       SET numero = ?, banco = ?, emisor = ?, cuit_emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
            importe = ?, tasa_interes = ?, interes_cobrado = ?, dinero_saliente = ?, notas = ?
        WHERE id = ? AND usuario_id = ?`,
-      [numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id, usuarioId]
+      [numero, banco, emisor, cuitVal, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id, usuarioId]
     );
 
     if (upd.affectedRows === 0) {
@@ -349,6 +362,7 @@ async function exportarExcel(req, res) {
         'N° Cheque': c.numero,
         'Banco': c.banco,
         'Emisor': c.emisor,
+        'CUIT Emisor': c.cuit_emisor || '-',
         'Entregador (Cliente)': c.entregador,
         'Fecha Recepción': new Date(c.fecha_recepcion).toISOString().split('T')[0],
         'Fecha Cobro': new Date(c.fecha_cobro).toISOString().split('T')[0],

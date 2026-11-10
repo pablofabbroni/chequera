@@ -13,6 +13,7 @@ const entregaRoutes = require('./routes/entregaRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const clienteRoutes = require('./routes/clienteRoutes');
+const bcraRoutes = require('./routes/bcraRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,6 +40,7 @@ app.use('/api/entregas', entregaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notificaciones', notificationRoutes);
 app.use('/api/clientes', clienteRoutes);
+app.use('/api/bcra', bcraRoutes);
 
 // Endpoint de Salud
 app.get('/api/health', (req, res) => {

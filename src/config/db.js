@@ -117,6 +117,7 @@ async function initDB() {
         numero VARCHAR(50) NOT NULL,
         banco VARCHAR(100) NOT NULL,
         emisor VARCHAR(150) NOT NULL,
+        cuit_emisor VARCHAR(20) NULL,
         entregador VARCHAR(150) NOT NULL,
         fecha_recepcion DATE NOT NULL,
         fecha_cobro DATE NOT NULL,
@@ -140,9 +141,10 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // Migración segura para bases de datos existentes (columnas de opciones de cobro + usuario_id)
+    // Migración segura para bases de datos existentes (columnas de opciones de cobro + usuario_id + cuit_emisor)
     const alterColumns = [
       "ADD COLUMN usuario_id INT NULL AFTER id",
+      "ADD COLUMN cuit_emisor VARCHAR(20) NULL AFTER emisor",
       "ADD COLUMN tipo_cobro VARCHAR(30) NULL AFTER fecha_estado",
       "ADD COLUMN tasa_descuento_banco DECIMAL(8, 2) DEFAULT 0.00 AFTER tipo_cobro",
       "ADD COLUMN descuento_banco DECIMAL(15, 2) DEFAULT 0.00 AFTER tasa_descuento_banco",

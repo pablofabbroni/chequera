@@ -240,6 +240,7 @@ const CarteraModule = {
             <!-- Columna 2: Emisor y Entregador -->
             <td>
               <div style="font-weight: 600; color: #fff;">${c.emisor}</div>
+              ${c.cuit_emisor ? `<div style="font-size: 0.72rem; color: var(--text-dim);">CUIT: ${c.cuit_emisor}</div>` : ''}
               <div style="font-size: 0.8rem; color: var(--text-muted);">Entregó: <span style="color: #e2e8f0;">${c.entregador}</span></div>
             </td>
 
@@ -355,6 +356,7 @@ const CarteraModule = {
 
             <div class="card-meta-grid">
               <div>Emisor: <span class="val">${c.emisor}</span></div>
+              <div>CUIT Emisor: <span class="val">${c.cuit_emisor || '-'}</span></div>
               <div>Entregó: <span class="val">${c.entregador}</span></div>
               <div>Cobro: <span class="val">${formatFecha(c.fecha_cobro)}</span></div>
               <div>Venc. legal: <span class="val">${met.fechaVencimientoLegal || '-'}</span></div>
@@ -602,7 +604,7 @@ const CarteraModule = {
       const infoCobro = ch.estado === 'Cobrado'
         ? `\nModalidad Cobro: ${ch.tipo_cobro === 'ANTICIPADO' ? 'Anticipado (Venta al banco)' : 'En fecha (Impuesto al cheque)'}\nDescuento Banco (${ch.tasa_descuento_banco || 0}%): -${formatARS(descBanco)}\nGanancia Neta Final: ${formatARS(gananciaNeta)}`
         : '';
-      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
+      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}${ch.cuit_emisor ? `\nCUIT Emisor: ${ch.cuit_emisor}` : ''}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
     } catch (e) {
       showToast(e.message, 'error');
     }
