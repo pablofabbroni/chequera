@@ -12,9 +12,10 @@ async function entregarCheque(req, res) {
     }
 
     const pool = getPool();
+    const usuarioId = req.user.id;
 
-    // Validar estado del cheque
-    const [chequeRows] = await pool.query('SELECT * FROM cheques WHERE id = ?', [cheque_id]);
+    // Validar estado del cheque perteneciente al usuario
+    const [chequeRows] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [cheque_id, usuarioId]);
     if (chequeRows.length === 0) {
       return res.status(404).json({ error: 'Cheque no encontrado.' });
     }
@@ -32,16 +33,16 @@ async function entregarCheque(req, res) {
       await connection.beginTransaction();
 
       await connection.query(
-        `INSERT INTO entregas (cheque_id, destinatario, fecha_entrega, concepto, notas)
-         VALUES (?, ?, ?, ?, ?)`,
-        [cheque_id, destinatario.trim(), fecha_entrega, concepto ? concepto.trim() : null, notas ? notas.trim() : null]
+        `INSERT INTO entregas (usuario_id, cheque_id, destinatario, fecha_entrega, concepto, notas)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [usuarioId, cheque_id, destinatario.trim(), fecha_entrega, concepto ? concepto.trim() : null, notas ? notas.trim() : null]
       );
 
       await connection.query(
         `UPDATE cheques 
          SET estado = 'Entregado', fecha_estado = ?
-         WHERE id = ?`,
-        [fecha_entrega, cheque_id]
+         WHERE id = ? AND usuario_id = ?`,
+        [fecha_entrega, cheque_id, usuarioId]
       );
 
       await connection.commit();
@@ -68,6 +69,7 @@ async function obtenerEntregados(req, res) {
   try {
     const { destinatario, search, desde, hasta } = req.query;
     const pool = getPool();
+    const usuarioId = req.user.id;
 
     let query = `
       SELECT 
@@ -90,9 +92,9 @@ async function obtenerEntregados(req, res) {
         c.estado
       FROM entregas e
       INNER JOIN cheques c ON e.cheque_id = c.id
-      WHERE 1=1
+      WHERE e.usuario_id = ? AND c.usuario_id = ?
     `;
-    const params = [];
+    const params = [usuarioId, usuarioId];
 
     if (destinatario) {
       query += ' AND e.destinatario LIKE ?';
@@ -138,8 +140,9 @@ async function revertirEntrega(req, res) {
   try {
     const { entregaId } = req.params;
     const pool = getPool();
+    const usuarioId = req.user.id;
 
-    const [entregas] = await pool.query('SELECT * FROM entregas WHERE id = ?', [entregaId]);
+    const [entregas] = await pool.query('SELECT * FROM entregas WHERE id = ? AND usuario_id = ?', [entregaId, usuarioId]);
     if (entregas.length === 0) {
       return res.status(404).json({ error: 'Registro de entrega no encontrado.' });
     }
@@ -150,10 +153,10 @@ async function revertirEntrega(req, res) {
     try {
       await connection.beginTransaction();
 
-      await connection.query('DELETE FROM entregas WHERE id = ?', [entregaId]);
+      await connection.query('DELETE FROM entregas WHERE id = ? AND usuario_id = ?', [entregaId, usuarioId]);
       await connection.query(
-        "UPDATE cheques SET estado = 'Pendiente', fecha_estado = NULL WHERE id = ?",
-        [entrega.cheque_id]
+        "UPDATE cheques SET estado = 'Pendiente', fecha_estado = NULL WHERE id = ? AND usuario_id = ?",
+        [entrega.cheque_id, usuarioId]
       );
 
       await connection.commit();

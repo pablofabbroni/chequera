@@ -10,13 +10,13 @@ if (publicKey && privateKey) {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 }
 
-async function saveSubscription(subscription) {
+async function saveSubscription(subscription, usuarioId) {
   const pool = getPool();
   const endpoint = subscription.endpoint;
   const p256dh = subscription.keys?.p256dh || '';
   const auth = subscription.keys?.auth || '';
 
-  // Verificar si ya existe para evitar duplicados
+  // Verificar si ya existe para asociarla al usuario actual
   const [existing] = await pool.query(
     'SELECT id FROM push_subscriptions WHERE endpoint = ? LIMIT 1',
     [endpoint]
@@ -24,20 +24,25 @@ async function saveSubscription(subscription) {
 
   if (existing.length === 0) {
     await pool.query(
-      'INSERT INTO push_subscriptions (endpoint, keys_p256dh, keys_auth) VALUES (?, ?, ?)',
-      [endpoint, p256dh, auth]
+      'INSERT INTO push_subscriptions (usuario_id, endpoint, keys_p256dh, keys_auth) VALUES (?, ?, ?, ?)',
+      [usuarioId, endpoint, p256dh, auth]
+    );
+  } else {
+    await pool.query(
+      'UPDATE push_subscriptions SET usuario_id = ?, keys_p256dh = ?, keys_auth = ? WHERE id = ?',
+      [usuarioId, p256dh, auth, existing[0].id]
     );
   }
 }
 
-async function sendPushToAll(payload) {
+async function sendPushToUser(usuarioId, payload) {
   if (!publicKey || !privateKey) {
     console.warn('[PUSH] Claves VAPID no configuradas. Omitiendo push.');
     return;
   }
 
   const pool = getPool();
-  const [subs] = await pool.query('SELECT * FROM push_subscriptions');
+  const [subs] = await pool.query('SELECT * FROM push_subscriptions WHERE usuario_id = ?', [usuarioId]);
 
   const stringifiedPayload = JSON.stringify(payload);
 
@@ -69,6 +74,6 @@ function getPublicKey() {
 
 module.exports = {
   saveSubscription,
-  sendPushToAll,
+  sendPushToUser,
   getPublicKey
 };

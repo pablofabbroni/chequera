@@ -5,9 +5,10 @@ async function obtenerMetricasDashboard(req, res) {
   try {
     const { anio, mes, cliente } = req.query;
     const pool = getPool();
+    const usuarioId = req.user.id;
 
-    let filtroFecha = '1=1';
-    const params = [];
+    let filtroFecha = 'usuario_id = ?';
+    const params = [usuarioId];
 
     if (anio) {
       filtroFecha += ' AND YEAR(fecha_recepcion) = ?';
@@ -140,28 +141,28 @@ async function obtenerMetricasDashboard(req, res) {
       }
     }
 
-    // 7. Años existentes con cheques en el sistema (dinámico)
+    // 7. Años existentes con cheques en el sistema (dinámico por usuario)
     const [aniosRows] = await pool.query(`
       SELECT DISTINCT anio FROM (
-        SELECT YEAR(fecha_cobro) AS anio FROM cheques WHERE fecha_cobro IS NOT NULL
+        SELECT YEAR(fecha_cobro) AS anio FROM cheques WHERE usuario_id = ? AND fecha_cobro IS NOT NULL
         UNION
-        SELECT YEAR(fecha_recepcion) AS anio FROM cheques WHERE fecha_recepcion IS NOT NULL
+        SELECT YEAR(fecha_recepcion) AS anio FROM cheques WHERE usuario_id = ? AND fecha_recepcion IS NOT NULL
       ) AS t
       ORDER BY anio DESC
-    `);
+    `, [usuarioId, usuarioId]);
     const aniosDisponibles = aniosRows.map(r => r.anio).filter(Boolean);
 
-    // 8. Clientes disponibles en el sistema (dinámico)
+    // 8. Clientes disponibles en el sistema (dinámico por usuario)
     const [clientesRows] = await pool.query(`
       SELECT DISTINCT TRIM(entregador) AS cliente 
       FROM cheques 
-      WHERE entregador IS NOT NULL AND TRIM(entregador) != ''
+      WHERE usuario_id = ? AND entregador IS NOT NULL AND TRIM(entregador) != ''
       UNION
       SELECT DISTINCT TRIM(nombre) AS cliente
       FROM clientes
-      WHERE nombre IS NOT NULL AND TRIM(nombre) != ''
+      WHERE usuario_id = ? AND nombre IS NOT NULL AND TRIM(nombre) != ''
       ORDER BY cliente ASC
-    `);
+    `, [usuarioId, usuarioId]);
     const clientesDisponibles = clientesRows.map(r => r.cliente).filter(Boolean);
 
     return res.json({

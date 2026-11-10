@@ -139,8 +139,36 @@ const App = {
     }
     API.setToken(null);
     this.usuarioActual = null;
+    this.resetEstadoModulos();
     this.mostrarLogin();
     showToast('Sesión cerrada.', 'success');
+  },
+
+  resetEstadoModulos() {
+    if (typeof DashboardModule !== 'undefined') {
+      DashboardModule.aniosCargados = false;
+      const fAnio = document.getElementById('dashFiltroAnio');
+      const fMes = document.getElementById('dashFiltroMes');
+      const fCliente = document.getElementById('dashFiltroCliente');
+      if (fAnio) fAnio.value = '';
+      if (fMes) fMes.value = '';
+      if (fCliente) fCliente.value = '';
+    }
+    if (typeof CarteraModule !== 'undefined') {
+      CarteraModule.cheques = [];
+      CarteraModule.filtroActual = { estado: 'Pendiente', search: '', cliente: '', soloAlertas: false };
+      const cCliente = document.getElementById('carteraFiltroCliente');
+      const cSearch = document.getElementById('searchCartera');
+      if (cCliente) cCliente.value = '';
+      if (cSearch) cSearch.value = '';
+    }
+    if (typeof EntregadosModule !== 'undefined') {
+      EntregadosModule.entregados = [];
+      EntregadosModule.chequesDisponibles = [];
+    }
+    if (typeof IngresoModule !== 'undefined') {
+      IngresoModule.clientes = [];
+    }
   },
 
   actualizarUIUsuario() {

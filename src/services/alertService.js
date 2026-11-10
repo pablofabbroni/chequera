@@ -1,5 +1,5 @@
 const { getPool } = require('../config/db');
-const { sendPushToAll } = require('./pushService');
+const { sendPushToUser } = require('./pushService');
 
 /**
  * Calcula métricas de vencimiento para un cheque dado
@@ -49,12 +49,16 @@ function calcularMetricasCheque(cheque, hoy = new Date()) {
 /**
  * Procesa todos los cheques pendientes y genera notificaciones internas y Push
  */
-async function procesarAlertasAutomaticas() {
+async function procesarAlertasAutomaticas(onlyUsuarioId = null) {
   try {
     const pool = getPool();
-    const [cheques] = await pool.query(
-      "SELECT * FROM cheques WHERE estado = 'Pendiente'"
-    );
+    let sql = "SELECT * FROM cheques WHERE estado = 'Pendiente'";
+    const params = [];
+    if (onlyUsuarioId) {
+      sql += ' AND usuario_id = ?';
+      params.push(onlyUsuarioId);
+    }
+    const [cheques] = await pool.query(sql, params);
 
     const hoy = new Date();
     const hoyStr = hoy.toISOString().split('T')[0];
@@ -67,20 +71,20 @@ async function procesarAlertasAutomaticas() {
         const titulo = `⚠️ ALERTA CRÍTICA: Cheque N° ${ch.numero} por vencer legalmente`;
         const mensaje = `El cheque de ${ch.banco} por $${Number(ch.importe).toLocaleString('es-AR')} vence legalmente en ${metricas.diasParaVencLegal} días (plazo de 30 días).`;
 
-        // Evitar generar la misma notificación en el mismo día
+        // Evitar generar la misma notificación en el mismo día para este usuario
         const [existente] = await pool.query(
-          "SELECT id FROM notificaciones WHERE cheque_id = ? AND tipo = 'POR_VENCER_LEGAL' AND DATE(created_at) = ?",
-          [ch.id, hoyStr]
+          "SELECT id FROM notificaciones WHERE cheque_id = ? AND usuario_id = ? AND tipo = 'POR_VENCER_LEGAL' AND DATE(created_at) = ?",
+          [ch.id, ch.usuario_id, hoyStr]
         );
 
         if (existente.length === 0) {
           await pool.query(
-            "INSERT INTO notificaciones (cheque_id, tipo, titulo, mensaje) VALUES (?, 'POR_VENCER_LEGAL', ?, ?)",
-            [ch.id, titulo, mensaje]
+            "INSERT INTO notificaciones (usuario_id, cheque_id, tipo, titulo, mensaje) VALUES (?, ?, 'POR_VENCER_LEGAL', ?, ?)",
+            [ch.usuario_id, ch.id, titulo, mensaje]
           );
 
-          // Disparar Notificación Push al celular
-          await sendPushToAll({
+          // Disparar Notificación Push al celular del dueño del cheque
+          await sendPushToUser(ch.usuario_id, {
             title: titulo,
             body: mensaje,
             icon: '/icons/icon-192.png',
@@ -98,17 +102,17 @@ async function procesarAlertasAutomaticas() {
         const mensaje = `${ch.banco} - Importe: $${Number(ch.importe).toLocaleString('es-AR')} | Emisor: ${ch.emisor}`;
 
         const [existente] = await pool.query(
-          "SELECT id FROM notificaciones WHERE cheque_id = ? AND tipo = 'COBRO_CERCANO' AND DATE(created_at) = ?",
-          [ch.id, hoyStr]
+          "SELECT id FROM notificaciones WHERE cheque_id = ? AND usuario_id = ? AND tipo = 'COBRO_CERCANO' AND DATE(created_at) = ?",
+          [ch.id, ch.usuario_id, hoyStr]
         );
 
         if (existente.length === 0) {
           await pool.query(
-            "INSERT INTO notificaciones (cheque_id, tipo, titulo, mensaje) VALUES (?, 'COBRO_CERCANO', ?, ?)",
-            [ch.id, titulo, mensaje]
+            "INSERT INTO notificaciones (usuario_id, cheque_id, tipo, titulo, mensaje) VALUES (?, ?, 'COBRO_CERCANO', ?, ?)",
+            [ch.usuario_id, ch.id, titulo, mensaje]
           );
 
-          await sendPushToAll({
+          await sendPushToUser(ch.usuario_id, {
             title: titulo,
             body: mensaje,
             icon: '/icons/icon-192.png',

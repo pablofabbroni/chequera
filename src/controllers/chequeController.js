@@ -39,11 +39,12 @@ async function crearCheque(req, res) {
     const dineroSaliente = Math.round((numImporte - interesCobrado) * 100) / 100;
 
     const pool = getPool();
+    const usuarioId = req.user.id;
 
-    // Validar si ya existe un cheque con el mismo número y banco en Cartera Pendiente
+    // Validar si ya existe un cheque con el mismo número y banco en Cartera Pendiente para este usuario
     const [existente] = await pool.query(
-      "SELECT id FROM cheques WHERE numero = ? AND banco = ? AND estado = 'Pendiente' LIMIT 1",
-      [numero.trim(), banco.trim()]
+      "SELECT id FROM cheques WHERE usuario_id = ? AND numero = ? AND banco = ? AND estado = 'Pendiente' LIMIT 1",
+      [usuarioId, numero.trim(), banco.trim()]
     );
 
     if (existente.length > 0) {
@@ -54,9 +55,10 @@ async function crearCheque(req, res) {
 
     const [result] = await pool.query(
       `INSERT INTO cheques 
-        (numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
+        (usuario_id, numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
       [
+        usuarioId,
         numero.trim(),
         banco.trim(),
         emisor.trim(),
@@ -71,7 +73,7 @@ async function crearCheque(req, res) {
       ]
     );
 
-    const [nuevo] = await pool.query('SELECT * FROM cheques WHERE id = ?', [result.insertId]);
+    const [nuevo] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [result.insertId, usuarioId]);
 
     return res.status(201).json({
       mensaje: 'Cheque ingresado exitosamente a Cartera.',
@@ -93,9 +95,10 @@ async function obtenerCartera(req, res) {
   try {
     const { estado, banco, entregador, cliente, search, desde, hasta, soloAlertas, ordenarPor, orden } = req.query;
     const pool = getPool();
+    const usuarioId = req.user.id;
 
-    let query = 'SELECT * FROM cheques WHERE 1=1';
-    const params = [];
+    let query = 'SELECT * FROM cheques WHERE usuario_id = ?';
+    const params = [usuarioId];
 
     // Por defecto en Cartera muestra Pendientes, o todos si se solicita 'Todos'
     if (estado && estado !== 'Todos') {
@@ -165,9 +168,10 @@ async function obtenerCartera(req, res) {
 async function obtenerChequePorId(req, res) {
   try {
     const { id } = req.params;
+    const usuarioId = req.user.id;
     const pool = getPool();
 
-    const [rows] = await pool.query('SELECT * FROM cheques WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Cheque no encontrado.' });
     }
@@ -177,7 +181,7 @@ async function obtenerChequePorId(req, res) {
 
     let entrega = null;
     if (cheque.estado === 'Entregado') {
-      const [entregaRows] = await pool.query('SELECT * FROM entregas WHERE cheque_id = ? LIMIT 1', [id]);
+      const [entregaRows] = await pool.query('SELECT * FROM entregas WHERE cheque_id = ? AND usuario_id = ? LIMIT 1', [id, usuarioId]);
       if (entregaRows.length > 0) entrega = entregaRows[0];
     }
 
@@ -207,7 +211,8 @@ async function cambiarEstado(req, res) {
     }
 
     const pool = getPool();
-    const [exist] = await pool.query('SELECT * FROM cheques WHERE id = ?', [id]);
+    const usuarioId = req.user.id;
+    const [exist] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
     if (exist.length === 0) {
       return res.status(404).json({ error: 'Cheque no encontrado.' });
     }
@@ -239,11 +244,11 @@ async function cambiarEstado(req, res) {
       `UPDATE cheques 
        SET estado = ?, motivo_rechazo = ?, fecha_estado = NOW(),
            tipo_cobro = ?, tasa_descuento_banco = ?, descuento_banco = ?, monto_neto_cobrado = ?
-       WHERE id = ?`,
-      [nuevoEstado, motivoLimpio, tipoCobroVal, tasaBancoVal, descuentoBancoVal, montoNetoCobradoVal, id]
+       WHERE id = ? AND usuario_id = ?`,
+      [nuevoEstado, motivoLimpio, tipoCobroVal, tasaBancoVal, descuentoBancoVal, montoNetoCobradoVal, id, usuarioId]
     );
 
-    const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ?', [id]);
+    const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
 
     return res.json({
       mensaje: nuevoEstado === 'Cobrado'
@@ -285,15 +290,20 @@ async function actualizarCheque(req, res) {
     const dineroSaliente = Math.round((numImporte - interesCobrado) * 100) / 100;
 
     const pool = getPool();
-    await pool.query(
+    const usuarioId = req.user.id;
+    const [upd] = await pool.query(
       `UPDATE cheques 
        SET numero = ?, banco = ?, emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
            importe = ?, tasa_interes = ?, interes_cobrado = ?, dinero_saliente = ?, notas = ?
-       WHERE id = ?`,
-      [numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id]
+       WHERE id = ? AND usuario_id = ?`,
+      [numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id, usuarioId]
     );
 
-    const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ?', [id]);
+    if (upd.affectedRows === 0) {
+      return res.status(404).json({ error: 'Cheque no encontrado.' });
+    }
+
+    const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
     return res.json({
       mensaje: 'Cheque actualizado correctamente.',
       cheque: {
@@ -314,7 +324,10 @@ async function eliminarCheque(req, res) {
   try {
     const { id } = req.params;
     const pool = getPool();
-    await pool.query('DELETE FROM cheques WHERE id = ?', [id]);
+    const [del] = await pool.query('DELETE FROM cheques WHERE id = ? AND usuario_id = ?', [id, req.user.id]);
+    if (del.affectedRows === 0) {
+      return res.status(404).json({ error: 'Cheque no encontrado.' });
+    }
     return res.json({ mensaje: 'Cheque eliminado correctamente del sistema.' });
   } catch (error) {
     console.error('[ELIMINAR CHEQUE ERROR]', error);
@@ -328,7 +341,7 @@ async function eliminarCheque(req, res) {
 async function exportarExcel(req, res) {
   try {
     const pool = getPool();
-    const [rows] = await pool.query('SELECT * FROM cheques ORDER BY fecha_cobro ASC');
+    const [rows] = await pool.query('SELECT * FROM cheques WHERE usuario_id = ? ORDER BY fecha_cobro ASC', [req.user.id]);
 
     const dataExcel = rows.map(c => {
       const metricas = calcularMetricasCheque(c);
@@ -376,16 +389,19 @@ async function exportarExcel(req, res) {
 async function limpiarDuplicados(req, res) {
   try {
     const pool = getPool();
+    const usuarioId = req.user.id;
     const [result] = await pool.query(`
       DELETE c1 FROM cheques c1
       INNER JOIN cheques c2 
       WHERE c1.id > c2.id 
+        AND c1.usuario_id = ?
+        AND c2.usuario_id = ?
         AND c1.numero = c2.numero 
         AND c1.banco = c2.banco 
         AND c1.importe = c2.importe
         AND c1.estado = 'Pendiente'
         AND c2.estado = 'Pendiente';
-    `);
+    `, [usuarioId, usuarioId]);
 
     return res.json({
       mensaje: `Se eliminaron ${result.affectedRows || 0} cheques duplicados exitosamente.`,

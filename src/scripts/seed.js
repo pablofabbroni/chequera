@@ -13,6 +13,16 @@ async function seed() {
 
   console.log('Conectado a MySQL para cargar datos de prueba...');
 
+  const [adminRows] = await connection.query(
+    "SELECT id FROM usuarios WHERE LOWER(nombre) = 'administrador' OR email = 'admin@cheques.com' LIMIT 1"
+  );
+  if (adminRows.length === 0) {
+    console.log('No se encontró usuario administrador para asociar los cheques de prueba.');
+    await connection.end();
+    return;
+  }
+  const adminId = adminRows[0].id;
+
   // 1. Limpiar o verificar cheques
   const [existentes] = await connection.query('SELECT COUNT(*) as cant FROM cheques');
   if (existentes[0].cant > 0) {
@@ -100,15 +110,15 @@ async function seed() {
 
     const [res] = await connection.query(`
       INSERT INTO cheques 
-      (numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [c.numero, c.banco, c.emisor, c.entregador, c.fecha_recepcion, c.fecha_cobro, c.importe, c.tasa, interes, saliente, c.estado, c.notas]);
+      (usuario_id, numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [adminId, c.numero, c.banco, c.emisor, c.entregador, c.fecha_recepcion, c.fecha_cobro, c.importe, c.tasa, interes, saliente, c.estado, c.notas]);
 
     if (c.estado === 'Entregado') {
       await connection.query(`
-        INSERT INTO entregas (cheque_id, destinatario, fecha_entrega, concepto, notas)
-        VALUES (?, 'Proveedor Central Repuestos', ?, 'Pago de insumos del taller', 'Entregado con endoso')
-      `, [res.insertId, sumarDias(-5)]);
+        INSERT INTO entregas (usuario_id, cheque_id, destinatario, fecha_entrega, concepto, notas)
+        VALUES (?, ?, 'Proveedor Central Repuestos', ?, 'Pago de insumos del taller', 'Entregado con endoso')
+      `, [adminId, res.insertId, sumarDias(-5)]);
     }
   }
 

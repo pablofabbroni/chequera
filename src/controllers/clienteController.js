@@ -6,6 +6,7 @@ const { getPool } = require('../config/db');
 async function obtenerClientes(req, res) {
   try {
     const pool = getPool();
+    const usuarioId = req.user.id;
     const [rows] = await pool.query(`
       SELECT 
         c.id,
@@ -19,10 +20,11 @@ async function obtenerClientes(req, res) {
         COALESCE(SUM(ch.importe), 0) AS total_importe,
         COALESCE(SUM(ch.interes_cobrado), 0) AS total_ganancia
       FROM clientes c
-      LEFT JOIN cheques ch ON LOWER(TRIM(ch.entregador)) = LOWER(TRIM(c.nombre))
+      LEFT JOIN cheques ch ON ch.usuario_id = c.usuario_id AND LOWER(TRIM(ch.entregador)) = LOWER(TRIM(c.nombre))
+      WHERE c.usuario_id = ?
       GROUP BY c.id, c.nombre, c.telefono, c.email, c.cuit, c.notas, c.created_at
       ORDER BY c.nombre ASC
-    `);
+    `, [usuarioId]);
 
     return res.json({ clientes: rows });
   } catch (error) {
@@ -43,12 +45,13 @@ async function crearCliente(req, res) {
     }
 
     const pool = getPool();
+    const usuarioId = req.user.id;
     const nombreLimpio = nombre.trim();
 
-    // Verificar si ya existe
+    // Verificar si ya existe para este usuario
     const [existentes] = await pool.query(
-      'SELECT * FROM clientes WHERE LOWER(TRIM(nombre)) = LOWER(?) LIMIT 1',
-      [nombreLimpio]
+      'SELECT * FROM clientes WHERE usuario_id = ? AND LOWER(TRIM(nombre)) = LOWER(?) LIMIT 1',
+      [usuarioId, nombreLimpio]
     );
 
     if (existentes.length > 0) {
@@ -60,9 +63,10 @@ async function crearCliente(req, res) {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO clientes (nombre, telefono, email, cuit, notas)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO clientes (usuario_id, nombre, telefono, email, cuit, notas)
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [
+        usuarioId,
         nombreLimpio,
         telefono ? telefono.trim() : null,
         email ? email.trim() : null,
@@ -106,10 +110,11 @@ async function actualizarCliente(req, res) {
     }
 
     const pool = getPool();
+    const usuarioId = req.user.id;
     const nombreLimpio = nombre.trim();
 
     // Obtener cliente anterior para ver si cambió el nombre
-    const [actual] = await pool.query('SELECT nombre FROM clientes WHERE id = ?', [id]);
+    const [actual] = await pool.query('SELECT nombre FROM clientes WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
     if (actual.length === 0) {
       return res.status(404).json({ error: 'Cliente no encontrado.' });
     }
@@ -119,22 +124,23 @@ async function actualizarCliente(req, res) {
     await pool.query(
       `UPDATE clientes 
        SET nombre = ?, telefono = ?, email = ?, cuit = ?, notas = ? 
-       WHERE id = ?`,
+       WHERE id = ? AND usuario_id = ?`,
       [
         nombreLimpio,
         telefono ? telefono.trim() : null,
         email ? email.trim() : null,
         cuit ? cuit.trim() : null,
         notas ? notas.trim() : null,
-        id
+        id,
+        usuarioId
       ]
     );
 
-    // Si cambió el nombre, sincronizar cheques asociados
+    // Si cambió el nombre, sincronizar cheques asociados del mismo usuario
     if (nombreAnterior.toLowerCase() !== nombreLimpio.toLowerCase()) {
       await pool.query(
-        'UPDATE cheques SET entregador = ? WHERE LOWER(TRIM(entregador)) = LOWER(TRIM(?))',
-        [nombreLimpio, nombreAnterior]
+        'UPDATE cheques SET entregador = ? WHERE usuario_id = ? AND LOWER(TRIM(entregador)) = LOWER(TRIM(?))',
+        [nombreLimpio, usuarioId, nombreAnterior]
       );
     }
 
@@ -151,14 +157,15 @@ async function actualizarCliente(req, res) {
 async function eliminarCliente(req, res) {
   try {
     const { id } = req.params;
+    const usuarioId = req.user.id;
     const pool = getPool();
 
-    const [cliente] = await pool.query('SELECT nombre FROM clientes WHERE id = ?', [id]);
+    const [cliente] = await pool.query('SELECT nombre FROM clientes WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
     if (cliente.length === 0) {
       return res.status(404).json({ error: 'Cliente no encontrado.' });
     }
 
-    await pool.query('DELETE FROM clientes WHERE id = ?', [id]);
+    await pool.query('DELETE FROM clientes WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
     return res.json({ mensaje: 'Cliente eliminado correctamente.' });
   } catch (error) {
     console.error('[CLIENTES ERROR] eliminarCliente:', error);
