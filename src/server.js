@@ -23,8 +23,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Archivos estáticos del Frontend
-app.use(express.static(path.join(__dirname, '../public')));
+// Archivos estáticos del Frontend (sin cache agresivo en manifest/sw para refrescar PWA)
+app.use(express.static(path.join(__dirname, '../public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('manifest.json') || filePath.endsWith('sw.js')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+}));
 
 // Rutas de API REST
 app.use('/api/auth', authRoutes);
@@ -39,8 +45,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// Redirección SPA al index
+// Evitar que archivos estáticos faltantes devuelvan index.html con 200 OK
 app.get('*', (req, res) => {
+  if (req.path.startsWith('/icons/') || req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.includes('.')) {
+    return res.status(404).send('Not found');
+  }
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
