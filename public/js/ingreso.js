@@ -47,6 +47,7 @@ const IngresoModule = {
       }, 10);
     });
 
+    // Banco selector custom
     // Banco selector custom + verificación de cheque denunciado en BCRA
     const bancoSelect = document.getElementById('selectBanco');
     const bancoOtroInput = document.getElementById('inputBancoOtro');

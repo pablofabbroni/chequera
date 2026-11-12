@@ -141,6 +141,7 @@ async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
+    // Migración segura para bases de datos existentes (columnas de opciones de cobro + usuario_id)
     // Migración segura para bases de datos existentes (columnas de opciones de cobro + usuario_id + cuit_emisor)
     const alterColumns = [
       "ADD COLUMN usuario_id INT NULL AFTER id",

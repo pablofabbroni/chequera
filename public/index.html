@@ -27,6 +27,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
+  <link rel="stylesheet" href="/css/app.css?v=2.8.0">
   <link rel="stylesheet" href="/css/app.css?v=3.0.0">
 </head>
 <body>
@@ -445,6 +446,7 @@
               <div class="form-grid">
                 <!-- N° Cheque -->
                 <div class="form-group">
+                  <label class="form-label" for="inputNumeroCheque">N° de Cheque *</label>
                   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
                     <label class="form-label" for="inputNumeroCheque" style="margin-bottom: 0;">N° de Cheque *</label>
                     <button type="button" id="btnVerificarChequeBcra" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary); border-color: rgba(14, 165, 233, 0.4);" title="Verificar si el cheque está denunciado en BCRA">
@@ -460,6 +462,19 @@
                   <label class="form-label" for="selectBanco">Banco *</label>
                   <select id="selectBanco" class="form-control" required>
                     <option value="">-- Seleccionar Banco --</option>
+                    <option value="Banco Galicia">Banco Galicia</option>
+                    <option value="Banco Santander">Banco Santander</option>
+                    <option value="Banco BBVA">Banco BBVA</option>
+                    <option value="Banco Macro">Banco Macro</option>
+                    <option value="Banco Nación">Banco Nación</option>
+                    <option value="Banco Provincia">Banco Provincia</option>
+                    <option value="Banco Ciudad">Banco Ciudad</option>
+                    <option value="Banco Credicoop">Banco Credicoop</option>
+                    <option value="Banco ICBC">Banco ICBC</option>
+                    <option value="Banco HSBC">Banco HSBC</option>
+                    <option value="Banco Patagonia">Banco Patagonia</option>
+                    <option value="Banco Supervielle">Banco Supervielle</option>
+                    <option value="Banco Comafi">Banco Comafi</option>
                     <optgroup label="Bancos Principales">
                       <option value="Banco Galicia" data-codigo-bcra="7">Banco Galicia</option>
                       <option value="Banco Santander" data-codigo-bcra="72">Banco Santander</option>
@@ -1198,6 +1213,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
+  <script src="/js/api.js?v=2.8.0"></script>
+  <script src="/js/notifications.js?v=2.8.0"></script>
+  <script src="/js/dashboard.js?v=2.8.0"></script>
+  <script src="/js/ingreso.js?v=2.8.0"></script>
+  <script src="/js/cartera.js?v=2.8.0"></script>
+  <script src="/js/entregados.js?v=2.8.0"></script>
+  <script src="/js/clientes.js?v=2.8.0"></script>
+  <script src="/js/app.js?v=2.9.0"></script>
   <script src="/js/api.js?v=3.0.0"></script>
   <script src="/js/notifications.js?v=3.0.0"></script>
   <script src="/js/dashboard.js?v=3.0.0"></script>

@@ -21,6 +21,7 @@ async function crearCheque(req, res) {
       notas
     } = req.body;
 
+    if (!numero || !banco || !emisor || !entregador || !fecha_recepcion || !fecha_cobro) {
     if (!numero || !banco || !emisor || !cuit_emisor || !entregador || !fecha_recepcion || !fecha_cobro) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben completarse.' });
     }
@@ -63,6 +64,8 @@ async function crearCheque(req, res) {
 
     const [result] = await pool.query(
       `INSERT INTO cheques 
+        (usuario_id, numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
         (usuario_id, numero, banco, emisor, cuit_emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
       [
@@ -137,6 +140,8 @@ async function obtenerCartera(req, res) {
     }
 
     if (search) {
+      query += ' AND (numero LIKE ? OR emisor LIKE ? OR entregador LIKE ? OR banco LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
       query += ' AND (numero LIKE ? OR emisor LIKE ? OR cuit_emisor LIKE ? OR entregador LIKE ? OR banco LIKE ?)';
       params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
@@ -306,9 +311,11 @@ async function actualizarCheque(req, res) {
     const usuarioId = req.user.id;
     const [upd] = await pool.query(
       `UPDATE cheques 
+       SET numero = ?, banco = ?, emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
        SET numero = ?, banco = ?, emisor = ?, cuit_emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
            importe = ?, tasa_interes = ?, interes_cobrado = ?, dinero_saliente = ?, notas = ?
        WHERE id = ? AND usuario_id = ?`,
+      [numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id, usuarioId]
       [numero, banco, emisor, cuitVal, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id, usuarioId]
     );
 

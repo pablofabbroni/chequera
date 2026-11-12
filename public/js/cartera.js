@@ -604,6 +604,7 @@ const CarteraModule = {
       const infoCobro = ch.estado === 'Cobrado'
         ? `\nModalidad Cobro: ${ch.tipo_cobro === 'ANTICIPADO' ? 'Anticipado (Venta al banco)' : 'En fecha (Impuesto al cheque)'}\nDescuento Banco (${ch.tasa_descuento_banco || 0}%): -${formatARS(descBanco)}\nGanancia Neta Final: ${formatARS(gananciaNeta)}`
         : '';
+      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
       alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}${ch.cuit_emisor ? `\nCUIT Emisor: ${ch.cuit_emisor}` : ''}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
     } catch (e) {
       showToast(e.message, 'error');
