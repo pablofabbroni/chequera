@@ -21,7 +21,6 @@ async function crearCheque(req, res) {
       notas
     } = req.body;
 
-    if (!numero || !banco || !emisor || !entregador || !fecha_recepcion || !fecha_cobro) {
     if (!numero || !banco || !emisor || !cuit_emisor || !entregador || !fecha_recepcion || !fecha_cobro) {
       return res.status(400).json({ error: 'Todos los campos obligatorios deben completarse.' });
     }
@@ -64,8 +63,6 @@ async function crearCheque(req, res) {
 
     const [result] = await pool.query(
       `INSERT INTO cheques 
-        (usuario_id, numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
         (usuario_id, numero, banco, emisor, cuit_emisor, entregador, fecha_recepcion, fecha_cobro, importe, tasa_interes, interes_cobrado, dinero_saliente, estado, notas)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pendiente', ?)`,
       [
