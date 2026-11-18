@@ -111,9 +111,6 @@ const CarteraModule = {
     const editFechaRecep = document.getElementById('editChequeFechaRecepcion');
     const editFechaCobro = document.getElementById('editChequeFechaCobro');
     const editTasa = document.getElementById('editChequeTasa');
-    const editTasaManual = document.getElementById('editChequeTasaManual');
-    const btnToggleEditTasa = document.getElementById('btnToggleEditTasaManual');
-    const btnCancelarEditTasa = document.getElementById('btnCancelarEditTasaManual');
     const btnEditConsultarBcra = document.getElementById('btnEditChequeConsultarBcra');
     const editBancoSelect = document.getElementById('editChequeBanco');
     const editBancoOtro = document.getElementById('editChequeBancoOtro');
@@ -123,42 +120,26 @@ const CarteraModule = {
     if (editFechaCobro) editFechaCobro.addEventListener('change', () => this.calcularEditEnVivo());
 
     if (editTasa) {
-      editTasa.addEventListener('change', () => {
-        if (editTasa.value === '__MANUAL__') {
-          this.activarEditTasaManual(true);
-        } else {
-          this.calcularEditEnVivo();
-        }
-      });
-    }
-
-    if (btnToggleEditTasa) {
-      btnToggleEditTasa.addEventListener('click', () => this.activarEditTasaManual(true));
-    }
-    if (btnCancelarEditTasa) {
-      btnCancelarEditTasa.addEventListener('click', () => this.activarEditTasaManual(false));
-    }
-
-    if (editTasaManual) {
-      editTasaManual.addEventListener('keydown', (e) => {
+      editTasa.addEventListener('keydown', (e) => {
         const allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
         if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
         if (/^[0-9]$/.test(e.key)) return;
-        if ((e.key === '.' || e.key === ',') && !editTasaManual.value.includes('.') && !editTasaManual.value.includes(',')) return;
+        if ((e.key === '.' || e.key === ',') && !editTasa.value.includes('.') && !editTasa.value.includes(',')) return;
         e.preventDefault();
       });
 
-      editTasaManual.addEventListener('input', () => {
-        let val = editTasaManual.value.replace(/[^0-9.,]/g, '');
+      editTasa.addEventListener('input', () => {
+        let val = editTasa.value.replace(/[^0-9.,]/g, '');
         const parts = val.split(/[.,]/);
         if (parts.length > 2) {
           val = parts[0] + '.' + parts.slice(1).join('');
         }
-        if (val !== editTasaManual.value) {
-          editTasaManual.value = val;
+        if (val !== editTasa.value) {
+          editTasa.value = val;
         }
         this.calcularEditEnVivo();
       });
+      editTasa.addEventListener('change', () => this.calcularEditEnVivo());
     }
 
     if (btnEditConsultarBcra) {
@@ -737,8 +718,11 @@ const CarteraModule = {
       // Cargar bancos en select de banco
       await this.cargarComboBancosEdicion(ch.banco);
 
-      // Poblar selector de tasas y seleccionar/activar manual
-      this.poblarSelectTasasEdicion(ch.tasa_interes);
+      // Asignar tasa de interés editable a mano
+      const editTasaInput = document.getElementById('editChequeTasa');
+      if (editTasaInput) {
+        editTasaInput.value = (ch.tasa_interes !== undefined && ch.tasa_interes !== null) ? ch.tasa_interes : '5';
+      }
 
       // Calcular preview inicial
       this.calcularEditEnVivo();
@@ -862,82 +846,11 @@ const CarteraModule = {
     }
   },
 
-  poblarSelectTasasEdicion(tasaActual = 5) {
-    const select = document.getElementById('editChequeTasa');
-    if (!select) return;
-
-    const numTasa = parseFloat(tasaActual) || 0;
-    const opciones = [];
-    let coincideExacto = false;
-
-    for (let t = 0.5; t <= 30; t += 0.5) {
-      const isSel = Math.abs(t - numTasa) < 0.001;
-      if (isSel) coincideExacto = true;
-      const label = Number.isInteger(t) ? `${t} %` : `${String(t).replace('.', ',')} %`;
-      opciones.push(`<option value="${t}" ${isSel ? 'selected' : ''}>${label}</option>`);
-    }
-
-    opciones.push('<option value="__MANUAL__">✏️ Otro (escribir a mano)...</option>');
-    select.innerHTML = opciones.join('');
-
-    if (coincideExacto) {
-      this.activarEditTasaManual(false);
-    } else {
-      this.activarEditTasaManual(true, numTasa);
-    }
-  },
-
-  activarEditTasaManual(activo, valorInicial = null) {
-    const select = document.getElementById('editChequeTasa');
-    const container = document.getElementById('containerEditTasaManual');
-    const input = document.getElementById('editChequeTasaManual');
-    const btnToggle = document.getElementById('btnToggleEditTasaManual');
-
-    if (!container) return;
-
-    if (activo) {
-      container.style.display = 'block';
-      if (select) select.style.display = 'none';
-      if (btnToggle) btnToggle.style.display = 'none';
-      if (input) {
-        if (valorInicial !== null && valorInicial !== undefined) {
-          input.value = valorInicial;
-        } else if (!input.value && select && select.value !== '__MANUAL__') {
-          input.value = select.value;
-        }
-        input.focus();
-        input.select();
-      }
-    } else {
-      container.style.display = 'none';
-      if (select) {
-        select.style.display = 'block';
-        if (select.value === '__MANUAL__') select.value = '5';
-      }
-      if (btnToggle) btnToggle.style.display = 'inline-block';
-    }
-    this.calcularEditEnVivo();
-  },
-
   obtenerTasaEdicion() {
-    const container = document.getElementById('containerEditTasaManual');
-    const input = document.getElementById('editChequeTasaManual');
-    const select = document.getElementById('editChequeTasa');
-
-    if (container && container.style.display !== 'none' && input) {
-      const num = parseFloat(input.value.replace(',', '.'));
-      return isNaN(num) ? 0 : Math.max(0, num);
-    }
-
-    if (select) {
-      if (select.value === '__MANUAL__') {
-        const num = parseFloat(input?.value.replace(',', '.') || '0');
-        return isNaN(num) ? 0 : Math.max(0, num);
-      }
-      const num = parseFloat(select.value);
-      return isNaN(num) ? 0 : Math.max(0, num);
-    }
-    return 0;
+    const input = document.getElementById('editChequeTasa');
+    if (!input) return 0;
+    const num = parseFloat(String(input.value || '').replace(',', '.'));
+    return isNaN(num) ? 0 : Math.max(0, num);
   },
 
   calcularEditEnVivo() {

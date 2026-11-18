@@ -27,7 +27,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
-  <link rel="stylesheet" href="/css/app.css?v=3.1.0">
+  <link rel="stylesheet" href="/css/app.css?v=3.1.1">
 </head>
 <body>
 
@@ -445,7 +445,6 @@
               <div class="form-grid">
                 <!-- N° Cheque -->
                 <div class="form-group">
-                  <label class="form-label" for="inputNumeroCheque">N° de Cheque *</label>
                   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
                     <label class="form-label" for="inputNumeroCheque" style="margin-bottom: 0;">N° de Cheque *</label>
                     <button type="button" id="btnVerificarChequeBcra" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary); border-color: rgba(14, 165, 233, 0.4);" title="Verificar si el cheque está denunciado en BCRA">
@@ -547,23 +546,8 @@
 
                 <!-- Tasa de Interés (%) -->
                 <div class="form-group">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
-                    <label class="form-label" for="inputTasa" style="margin-bottom: 0;">Tasa de Interés Cobrada (%) *</label>
-                    <button type="button" id="btnToggleTasaManual" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary);" title="Escribir porcentaje a mano">
-                      ✏️ Escribir a mano
-                    </button>
-                  </div>
-                  <select id="inputTasa" class="form-control" style="font-size: 1.05rem; font-weight: 700;" required>
-                    <!-- Opciones de 0,5% a 30% con pasos de 0,5% generadas dinámicamente -->
-                  </select>
-                  <div id="containerTasaManual" style="display: none; margin-top: 6px;">
-                    <div style="display: flex; gap: 8px;">
-                      <input type="text" id="inputTasaManual" class="form-control" placeholder="Ej: 3.75 (solo números)" inputmode="decimal" style="font-size: 1.05rem; font-weight: 700;">
-                      <button type="button" id="btnCancelarTasaManual" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; white-space: nowrap;">
-                        Volver a lista
-                      </button>
-                    </div>
-                  </div>
+                  <label class="form-label" for="inputTasa">Tasa de Interés Cobrada (%) *</label>
+                  <input type="text" id="inputTasa" class="form-control" placeholder="Ej: 5.5 (solo números)" inputmode="decimal" style="font-size: 1.05rem; font-weight: 700;" value="5" required>
                 </div>
               </div>
 
@@ -1300,24 +1284,10 @@
               <input type="number" id="editChequeImporte" step="0.01" min="1" class="form-control" style="font-size: 1.05rem; font-weight: 700;" required>
             </div>
 
-            <!-- Tasa de Interés con selector y manual -->
+            <!-- Tasa de Interés (%) -->
             <div class="form-group">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
-                <label class="form-label" for="editChequeTasa" style="margin-bottom: 0;">Tasa de Interés (%) *</label>
-                <button type="button" id="btnToggleEditTasaManual" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary);">
-                  ✏️ Escribir a mano
-                </button>
-              </div>
-              <select id="editChequeTasa" class="form-control" style="font-size: 1.05rem; font-weight: 700;" required>
-              </select>
-              <div id="containerEditTasaManual" style="display: none; margin-top: 6px;">
-                <div style="display: flex; gap: 8px;">
-                  <input type="text" id="editChequeTasaManual" class="form-control" placeholder="Ej: 4.25 (solo números)" inputmode="decimal" style="font-size: 1.05rem; font-weight: 700;">
-                  <button type="button" id="btnCancelarEditTasaManual" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; white-space: nowrap;">
-                    Volver a lista
-                  </button>
-                </div>
-              </div>
+              <label class="form-label" for="editChequeTasa">Tasa de Interés (%) *</label>
+              <input type="text" id="editChequeTasa" class="form-control" placeholder="Ej: 4.5 (solo números)" inputmode="decimal" style="font-size: 1.05rem; font-weight: 700;" required>
             </div>
           </div>
 
@@ -1385,14 +1355,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=3.1.0"></script>
-  <script src="/js/notifications.js?v=3.1.0"></script>
-  <script src="/js/dashboard.js?v=3.1.0"></script>
-  <script src="/js/consultas.js?v=3.1.0"></script>
-  <script src="/js/ingreso.js?v=3.1.0"></script>
-  <script src="/js/cartera.js?v=3.1.0"></script>
-  <script src="/js/entregados.js?v=3.1.0"></script>
-  <script src="/js/clientes.js?v=3.1.0"></script>
-  <script src="/js/app.js?v=3.1.0"></script>
+  <script src="/js/api.js?v=3.1.1"></script>
+  <script src="/js/notifications.js?v=3.1.1"></script>
+  <script src="/js/dashboard.js?v=3.1.1"></script>
+  <script src="/js/consultas.js?v=3.1.1"></script>
+  <script src="/js/ingreso.js?v=3.1.1"></script>
+  <script src="/js/cartera.js?v=3.1.1"></script>
+  <script src="/js/entregados.js?v=3.1.1"></script>
+  <script src="/js/clientes.js?v=3.1.1"></script>
+  <script src="/js/app.js?v=3.1.1"></script>
 </body>
 </html>

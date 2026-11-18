@@ -10,7 +10,6 @@ const IngresoModule = {
   chequeTimer: null,
 
   async init() {
-    this.poblarSelectTasas();
     this.resetFechas();
     await this.cargarComboClientes();
     await this.cargarBancosAdicionalesBcra();
@@ -27,58 +26,34 @@ const IngresoModule = {
     // Escuchar cambios reactivos para calcular en vivo
     const importeInput = document.getElementById('inputImporte');
     const tasaInput = document.getElementById('inputTasa');
-    const tasaManualInput = document.getElementById('inputTasaManual');
-    const containerTasaManual = document.getElementById('containerTasaManual');
-    const btnToggleTasaManual = document.getElementById('btnToggleTasaManual');
-    const btnCancelarTasaManual = document.getElementById('btnCancelarTasaManual');
     const fechaRecepInput = document.getElementById('inputFechaRecepcion');
     const fechaCobroInput = document.getElementById('inputFechaCobro');
 
     if (importeInput) importeInput.addEventListener('input', () => this.calcularEnVivo());
+
     if (tasaInput) {
-      tasaInput.addEventListener('change', () => {
-        if (tasaInput.value === '__MANUAL__') {
-          this.activarTasaManual(true);
-        } else {
-          this.calcularEnVivo();
-        }
-      });
-    }
-
-    if (btnToggleTasaManual) {
-      btnToggleTasaManual.addEventListener('click', () => {
-        this.activarTasaManual(true);
-      });
-    }
-
-    if (btnCancelarTasaManual) {
-      btnCancelarTasaManual.addEventListener('click', () => {
-        this.activarTasaManual(false);
-      });
-    }
-
-    if (tasaManualInput) {
-      // Bloquear teclas que no sean números ni punto/coma
-      tasaManualInput.addEventListener('keydown', (e) => {
+      // Bloquear teclas no numéricas
+      tasaInput.addEventListener('keydown', (e) => {
         const allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
         if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
         if (/^[0-9]$/.test(e.key)) return;
-        if ((e.key === '.' || e.key === ',') && !tasaManualInput.value.includes('.') && !tasaManualInput.value.includes(',')) return;
+        if ((e.key === '.' || e.key === ',') && !tasaInput.value.includes('.') && !tasaInput.value.includes(',')) return;
         e.preventDefault();
       });
 
-      // Sanitizar texto si se pega
-      tasaManualInput.addEventListener('input', () => {
-        let val = tasaManualInput.value.replace(/[^0-9.,]/g, '');
+      // Sanitizar texto y recalcular en vivo
+      tasaInput.addEventListener('input', () => {
+        let val = tasaInput.value.replace(/[^0-9.,]/g, '');
         const parts = val.split(/[.,]/);
         if (parts.length > 2) {
           val = parts[0] + '.' + parts.slice(1).join('');
         }
-        if (val !== tasaManualInput.value) {
-          tasaManualInput.value = val;
+        if (val !== tasaInput.value) {
+          tasaInput.value = val;
         }
         this.calcularEnVivo();
       });
+      tasaInput.addEventListener('change', () => this.calcularEnVivo());
     }
 
     if (fechaRecepInput) fechaRecepInput.addEventListener('change', () => this.calcularEnVivo());
@@ -86,7 +61,6 @@ const IngresoModule = {
 
     form.addEventListener('reset', () => {
       setTimeout(() => {
-        this.activarTasaManual(false);
         if (tasaInput) tasaInput.value = '5';
         this.resetBcraStatus();
         this.resetFechas();
@@ -177,69 +151,11 @@ const IngresoModule = {
     this.calcularEnVivo();
   },
 
-  poblarSelectTasas() {
-    const tasaSelect = document.getElementById('inputTasa');
-    if (!tasaSelect || tasaSelect.options.length > 0) return;
-
-    const opciones = [];
-    for (let t = 0.5; t <= 30; t += 0.5) {
-      const label = Number.isInteger(t) ? `${t} %` : `${String(t).replace('.', ',')} %`;
-      const selected = t === 5 ? 'selected' : '';
-      opciones.push(`<option value="${t}" ${selected}>${label}</option>`);
-    }
-    opciones.push('<option value="__MANUAL__">✏️ Otro (escribir a mano)...</option>');
-    tasaSelect.innerHTML = opciones.join('');
-  },
-
-  activarTasaManual(activo) {
-    const tasaSelect = document.getElementById('inputTasa');
-    const containerManual = document.getElementById('containerTasaManual');
-    const tasaManualInput = document.getElementById('inputTasaManual');
-    const btnToggle = document.getElementById('btnToggleTasaManual');
-
-    if (!containerManual) return;
-
-    if (activo) {
-      containerManual.style.display = 'block';
-      if (tasaSelect) tasaSelect.style.display = 'none';
-      if (btnToggle) btnToggle.style.display = 'none';
-      if (tasaManualInput) {
-        if (!tasaManualInput.value && tasaSelect && tasaSelect.value !== '__MANUAL__') {
-          tasaManualInput.value = tasaSelect.value;
-        }
-        tasaManualInput.focus();
-        tasaManualInput.select();
-      }
-    } else {
-      containerManual.style.display = 'none';
-      if (tasaSelect) {
-        tasaSelect.style.display = 'block';
-        if (tasaSelect.value === '__MANUAL__') tasaSelect.value = '5';
-      }
-      if (btnToggle) btnToggle.style.display = 'inline-block';
-    }
-    this.calcularEnVivo();
-  },
-
   obtenerTasaIngreso() {
-    const containerManual = document.getElementById('containerTasaManual');
-    const tasaManualInput = document.getElementById('inputTasaManual');
-    const tasaSelect = document.getElementById('inputTasa');
-
-    if (containerManual && containerManual.style.display !== 'none' && tasaManualInput) {
-      const num = parseFloat(tasaManualInput.value.replace(',', '.'));
-      return isNaN(num) ? 0 : Math.max(0, num);
-    }
-
-    if (tasaSelect) {
-      if (tasaSelect.value === '__MANUAL__') {
-        const num = parseFloat(tasaManualInput?.value.replace(',', '.') || '0');
-        return isNaN(num) ? 0 : Math.max(0, num);
-      }
-      const num = parseFloat(tasaSelect.value);
-      return isNaN(num) ? 0 : Math.max(0, num);
-    }
-    return 0;
+    const tasaInput = document.getElementById('inputTasa');
+    if (!tasaInput) return 0;
+    const num = parseFloat(String(tasaInput.value || '').replace(',', '.'));
+    return isNaN(num) ? 0 : Math.max(0, num);
   },
 
   async cargarBancosAdicionalesBcra() {
@@ -613,9 +529,8 @@ const IngresoModule = {
 
       // Limpiar formulario y resetear valores
       document.getElementById('formIngresoCheque').reset();
-      this.activarTasaManual(false);
-      const tasaSelect = document.getElementById('inputTasa');
-      if (tasaSelect) tasaSelect.value = '5';
+      const tasaInput = document.getElementById('inputTasa');
+      if (tasaInput) tasaInput.value = '5';
       this.resetBcraStatus();
       this.resetFechas();
       this.calcularEnVivo();
