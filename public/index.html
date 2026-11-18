@@ -27,7 +27,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Estilos del Sistema -->
-  <link rel="stylesheet" href="/css/app.css?v=3.0.1">
+  <link rel="stylesheet" href="/css/app.css?v=3.1.0">
 </head>
 <body>
 
@@ -547,10 +547,23 @@
 
                 <!-- Tasa de Interés (%) -->
                 <div class="form-group">
-                  <label class="form-label" for="inputTasa">Tasa de Interés Cobrada (%) *</label>
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                    <label class="form-label" for="inputTasa" style="margin-bottom: 0;">Tasa de Interés Cobrada (%) *</label>
+                    <button type="button" id="btnToggleTasaManual" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary);" title="Escribir porcentaje a mano">
+                      ✏️ Escribir a mano
+                    </button>
+                  </div>
                   <select id="inputTasa" class="form-control" style="font-size: 1.05rem; font-weight: 700;" required>
-                    <!-- Opciones de 1% a 30% con pasos de 0,5% generadas dinámicamente -->
+                    <!-- Opciones de 0,5% a 30% con pasos de 0,5% generadas dinámicamente -->
                   </select>
+                  <div id="containerTasaManual" style="display: none; margin-top: 6px;">
+                    <div style="display: flex; gap: 8px;">
+                      <input type="text" id="inputTasaManual" class="form-control" placeholder="Ej: 3.75 (solo números)" inputmode="decimal" style="font-size: 1.05rem; font-weight: 700;">
+                      <button type="button" id="btnCancelarTasaManual" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; white-space: nowrap;">
+                        Volver a lista
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1208,18 +1221,178 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
+  <!-- MODAL: EDITAR CHEQUE (Corrección de datos) -->
+  <!-- ========================================== -->
+  <div id="modalEditarCheque" class="modal-overlay">
+    <div class="modal-card" style="max-width: 720px; max-height: 92vh; overflow-y: auto;">
+      <div class="modal-header">
+        <div>
+          <h3 style="color: #fff; font-size: 1.18rem; font-weight: 700;">Editar Cheque</h3>
+          <span id="modalEditarChequeSubtitulo" style="font-size: 0.78rem; color: var(--text-muted);">Modificación y corrección de datos en Cartera</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="CarteraModule.cerrarModalEditar()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form id="formEditarCheque">
+        <input type="hidden" id="editChequeId">
+
+        <div class="modal-body" style="padding-top: 10px;">
+          <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
+            <!-- Número de Cheque -->
+            <div class="form-group">
+              <label class="form-label" for="editChequeNumero">Número de Cheque *</label>
+              <input type="text" id="editChequeNumero" class="form-control" placeholder="Ej: 00482910" required>
+            </div>
+
+            <!-- Banco Emisor -->
+            <div class="form-group">
+              <label class="form-label" for="editChequeBanco">Banco Emisor *</label>
+              <select id="editChequeBanco" class="form-control" required>
+                <!-- Opciones cargadas dinámicamente -->
+              </select>
+              <input type="text" id="editChequeBancoOtro" class="form-control" placeholder="Nombre de la entidad..." style="display: none; margin-top: 6px;">
+            </div>
+
+            <!-- Emisor del Cheque -->
+            <div class="form-group">
+              <label class="form-label" for="editChequeEmisor">Emisor del Cheque *</label>
+              <input type="text" id="editChequeEmisor" class="form-control" placeholder="Titular / Razón Social" required>
+            </div>
+
+            <!-- CUIT del Emisor + Consulta BCRA -->
+            <div class="form-group">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                <label class="form-label" for="editChequeCuit" style="margin-bottom: 0;">CUIT del Emisor *</label>
+                <button type="button" id="btnEditChequeConsultarBcra" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary);" title="Consultar BCRA">
+                  Consultar BCRA
+                </button>
+              </div>
+              <input type="text" id="editChequeCuit" class="form-control" placeholder="Ej: 30-12345678-9" maxlength="15" inputmode="numeric" required>
+              <div id="editChequeCuitBadge" class="bcra-inline-status" style="display: none;"></div>
+            </div>
+
+            <!-- Entregador / Cliente -->
+            <div class="form-group">
+              <label class="form-label" for="editChequeEntregador">Entregador (Cliente) *</label>
+              <select id="editChequeEntregador" class="form-control" required>
+                <option value="">-- Seleccionar cliente --</option>
+              </select>
+            </div>
+
+            <!-- Fecha Recepción -->
+            <div class="form-group">
+              <label class="form-label" for="editChequeFechaRecepcion">Fecha de Recepción *</label>
+              <input type="date" id="editChequeFechaRecepcion" class="form-control" required>
+            </div>
+
+            <!-- Fecha Cobro -->
+            <div class="form-group">
+              <label class="form-label" for="editChequeFechaCobro">Fecha de Cobro *</label>
+              <input type="date" id="editChequeFechaCobro" class="form-control" required>
+            </div>
+
+            <!-- Importe Nominal -->
+            <div class="form-group">
+              <label class="form-label" for="editChequeImporte">Importe Nominal ($) *</label>
+              <input type="number" id="editChequeImporte" step="0.01" min="1" class="form-control" style="font-size: 1.05rem; font-weight: 700;" required>
+            </div>
+
+            <!-- Tasa de Interés con selector y manual -->
+            <div class="form-group">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px;">
+                <label class="form-label" for="editChequeTasa" style="margin-bottom: 0;">Tasa de Interés (%) *</label>
+                <button type="button" id="btnToggleEditTasaManual" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.72rem; color: var(--primary);">
+                  ✏️ Escribir a mano
+                </button>
+              </div>
+              <select id="editChequeTasa" class="form-control" style="font-size: 1.05rem; font-weight: 700;" required>
+              </select>
+              <div id="containerEditTasaManual" style="display: none; margin-top: 6px;">
+                <div style="display: flex; gap: 8px;">
+                  <input type="text" id="editChequeTasaManual" class="form-control" placeholder="Ej: 4.25 (solo números)" inputmode="decimal" style="font-size: 1.05rem; font-weight: 700;">
+                  <button type="button" id="btnCancelarEditTasaManual" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; white-space: nowrap;">
+                    Volver a lista
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notas -->
+          <div class="form-group" style="margin-top: 14px;">
+            <label class="form-label" for="editChequeNotas">Notas u Observaciones</label>
+            <textarea id="editChequeNotas" class="form-control" rows="2" placeholder="Observaciones o aclaraciones..."></textarea>
+          </div>
+
+          <!-- Resumen Financiero en Vivo -->
+          <div class="calculator-box" style="margin-top: 16px; padding: 12px 16px;">
+            <div class="calc-item">
+              <span class="calc-label">Importe</span>
+              <span class="calc-value" id="editPreviewImporte">$ 0,00</span>
+            </div>
+            <div class="calc-item">
+              <span class="calc-label">Interés Cobrado</span>
+              <span class="calc-value green" id="editPreviewInteres">$ 0,00</span>
+            </div>
+            <div class="calc-item">
+              <span class="calc-label">Dinero Saliente</span>
+              <span class="calc-value blue" id="editPreviewSaliente">$ 0,00</span>
+            </div>
+            <div class="calc-item">
+              <span class="calc-label">Plazo</span>
+              <span class="calc-value" id="editPreviewDias" style="font-size: 1.15rem; color: #fff;">0 días</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="margin-top: 18px;">
+          <button type="button" class="btn btn-secondary" onclick="CarteraModule.cerrarModalEditar()">
+            Cancelar
+          </button>
+          <button type="submit" id="btnSubmitEditCheque" class="btn btn-primary" style="font-weight: 700;">
+            Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: INFORMACIÓN DE CAMPOS BCRA -->
+  <!-- ========================================== -->
+  <div id="modalInfoBcraCampo" class="modal-overlay">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="modalInfoBcraTitulo" style="color: #fff; font-size: 1.05rem; font-weight: 700;">Información del Campo</h3>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalInfoBcraCampo').classList.remove('show')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modalInfoBcraCuerpo" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-muted);">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('modalInfoBcraCampo').classList.remove('show')">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Scripts de la Aplicación -->
-  <script src="/js/api.js?v=3.0.1"></script>
-  <script src="/js/notifications.js?v=3.0.1"></script>
-  <script src="/js/dashboard.js?v=3.0.1"></script>
-  <script src="/js/consultas.js?v=3.0.1"></script>
-  <script src="/js/ingreso.js?v=3.0.1"></script>
-  <script src="/js/cartera.js?v=3.0.1"></script>
-  <script src="/js/entregados.js?v=3.0.1"></script>
-  <script src="/js/clientes.js?v=3.0.1"></script>
-  <script src="/js/app.js?v=3.0.1"></script>
+  <script src="/js/api.js?v=3.1.0"></script>
+  <script src="/js/notifications.js?v=3.1.0"></script>
+  <script src="/js/dashboard.js?v=3.1.0"></script>
+  <script src="/js/consultas.js?v=3.1.0"></script>
+  <script src="/js/ingreso.js?v=3.1.0"></script>
+  <script src="/js/cartera.js?v=3.1.0"></script>
+  <script src="/js/entregados.js?v=3.1.0"></script>
+  <script src="/js/clientes.js?v=3.1.0"></script>
+  <script src="/js/app.js?v=3.1.0"></script>
 </body>
 </html>

@@ -241,8 +241,18 @@ async function cambiarEstado(req, res) {
     let tasaBancoVal = 0;
     let descuentoBancoVal = 0;
     let montoNetoCobradoVal = null;
+    let fechaEstadoVal = new Date();
 
-    if (nuevoEstado === 'Cobrado') {
+    if (nuevoEstado === 'Pendiente') {
+      fechaEstadoVal = null;
+      tipoCobroVal = null;
+      tasaBancoVal = 0;
+      descuentoBancoVal = 0;
+      montoNetoCobradoVal = null;
+
+      // Limpiar entrega asociada si existiese
+      await pool.query('DELETE FROM entregas WHERE cheque_id = ? AND usuario_id = ?', [id, usuarioId]);
+    } else if (nuevoEstado === 'Cobrado') {
       tipoCobroVal = tipoCobro === 'ANTICIPADO' ? 'ANTICIPADO' : 'EN_FECHA';
       const parsedTasa = parseFloat(tasaDescuentoBanco);
       tasaBancoVal = !isNaN(parsedTasa) && parsedTasa >= 0 ? parsedTasa : 0;
@@ -253,18 +263,23 @@ async function cambiarEstado(req, res) {
 
     await pool.query(
       `UPDATE cheques 
-       SET estado = ?, motivo_rechazo = ?, fecha_estado = NOW(),
+       SET estado = ?, motivo_rechazo = ?, fecha_estado = ?,
            tipo_cobro = ?, tasa_descuento_banco = ?, descuento_banco = ?, monto_neto_cobrado = ?
        WHERE id = ? AND usuario_id = ?`,
-      [nuevoEstado, motivoLimpio, tipoCobroVal, tasaBancoVal, descuentoBancoVal, montoNetoCobradoVal, id, usuarioId]
+      [nuevoEstado, motivoLimpio, fechaEstadoVal, tipoCobroVal, tasaBancoVal, descuentoBancoVal, montoNetoCobradoVal, id, usuarioId]
     );
 
     const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
 
+    let mensajeExito = `Cheque marcado como "${nuevoEstado}".`;
+    if (nuevoEstado === 'Cobrado') {
+      mensajeExito = `Cheque #${cheque.numero} marcado como Cobrado (${tipoCobroVal === 'ANTICIPADO' ? 'Cobro anticipado' : 'Cobro en fecha'} - Desc. banco: ${tasaBancoVal}%).`;
+    } else if (nuevoEstado === 'Pendiente') {
+      mensajeExito = `Cheque #${cheque.numero} revertido y devuelto a Cartera como Pendiente.`;
+    }
+
     return res.json({
-      mensaje: nuevoEstado === 'Cobrado'
-        ? `Cheque #${cheque.numero} marcado como Cobrado (${tipoCobroVal === 'ANTICIPADO' ? 'Cobro anticipado' : 'Cobro en fecha'} - Desc. banco: ${tasaBancoVal}%).`
-        : `Cheque marcado como "${nuevoEstado}".`,
+      mensaje: mensajeExito,
       cheque: {
         ...actualizado[0],
         metricas: calcularMetricasCheque(actualizado[0])
@@ -295,34 +310,93 @@ async function actualizarCheque(req, res) {
       notas
     } = req.body;
 
-    const cuitNorm = cuit_emisor ? normalizarCuit(cuit_emisor) : null;
-    const cuitVal = cuitNorm ? formatearCuit(cuitNorm) : (cuit_emisor ? cuit_emisor.trim() : null);
+    if (!numero || !banco || !emisor || !entregador || !fecha_recepcion || !fecha_cobro) {
+      return res.status(400).json({ error: 'Todos los campos obligatorios deben completarse.' });
+    }
+
+    let cuitFormateado = null;
+    if (cuit_emisor) {
+      const cuitNorm = normalizarCuit(cuit_emisor);
+      if (!cuitNorm) {
+        return res.status(400).json({ error: 'El CUIT del Emisor debe tener exactamente 11 dígitos numéricos.' });
+      }
+      cuitFormateado = formatearCuit(cuitNorm);
+    } else {
+      return res.status(400).json({ error: 'El CUIT del Emisor es obligatorio.' });
+    }
 
     const numImporte = parseFloat(importe);
     const numTasa = parseFloat(tasa_interes);
 
-    const interesCobrado = Math.round((numImporte * (numTasa / 100)) * 100) / 100;
-    const dineroSaliente = Math.round((numImporte - interesCobrado) * 100) / 100;
+    if (isNaN(numImporte) || numImporte <= 0) {
+      return res.status(400).json({ error: 'El importe del cheque debe ser mayor a cero.' });
+    }
+    if (isNaN(numTasa) || numTasa < 0) {
+      return res.status(400).json({ error: 'La tasa de interés debe ser un número válido.' });
+    }
 
     const pool = getPool();
     const usuarioId = req.user.id;
-    const [upd] = await pool.query(
-      `UPDATE cheques 
-       SET numero = ?, banco = ?, emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
-       SET numero = ?, banco = ?, emisor = ?, cuit_emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
-           importe = ?, tasa_interes = ?, interes_cobrado = ?, dinero_saliente = ?, notas = ?
-       WHERE id = ? AND usuario_id = ?`,
-      [numero, banco, emisor, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id, usuarioId]
-      [numero, banco, emisor, cuitVal, entregador, fecha_recepcion, fecha_cobro, numImporte, numTasa, interesCobrado, dineroSaliente, notas, id, usuarioId]
-    );
 
-    if (upd.affectedRows === 0) {
+    // Verificar si el cheque existe
+    const [existente] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
+    if (existente.length === 0) {
       return res.status(404).json({ error: 'Cheque no encontrado.' });
     }
+    const chequeActual = existente[0];
+
+    // Evitar duplicado de número y banco en pendientes
+    const [duplicado] = await pool.query(
+      "SELECT id FROM cheques WHERE usuario_id = ? AND numero = ? AND banco = ? AND estado = 'Pendiente' AND id != ? LIMIT 1",
+      [usuarioId, numero.trim(), banco.trim(), id]
+    );
+    if (duplicado.length > 0) {
+      return res.status(400).json({
+        error: `Ya existe otro cheque N° ${numero.trim()} de ${banco.trim()} en Cartera Pendiente.`
+      });
+    }
+
+    const interesCobrado = Math.round((numImporte * (numTasa / 100)) * 100) / 100;
+    const dineroSaliente = Math.round((numImporte - interesCobrado) * 100) / 100;
+
+    let descuentoBancoVal = chequeActual.descuento_banco || 0;
+    let montoNetoCobradoVal = chequeActual.monto_neto_cobrado || null;
+
+    if (chequeActual.estado === 'Cobrado' && chequeActual.tipo_cobro) {
+      const tasaBanco = Number(chequeActual.tasa_descuento_banco) || 0;
+      descuentoBancoVal = Math.round((numImporte * (tasaBanco / 100)) * 100) / 100;
+      montoNetoCobradoVal = Math.round((numImporte - descuentoBancoVal) * 100) / 100;
+    }
+
+    await pool.query(
+      `UPDATE cheques 
+       SET numero = ?, banco = ?, emisor = ?, cuit_emisor = ?, entregador = ?, fecha_recepcion = ?, fecha_cobro = ?,
+           importe = ?, tasa_interes = ?, interes_cobrado = ?, dinero_saliente = ?, notas = ?,
+           descuento_banco = ?, monto_neto_cobrado = ?
+       WHERE id = ? AND usuario_id = ?`,
+      [
+        numero.trim(),
+        banco.trim(),
+        emisor.trim(),
+        cuitFormateado,
+        entregador.trim(),
+        fecha_recepcion,
+        fecha_cobro,
+        numImporte,
+        numTasa,
+        interesCobrado,
+        dineroSaliente,
+        notas ? notas.trim() : null,
+        descuentoBancoVal,
+        montoNetoCobradoVal,
+        id,
+        usuarioId
+      ]
+    );
 
     const [actualizado] = await pool.query('SELECT * FROM cheques WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
     return res.json({
-      mensaje: 'Cheque actualizado correctamente.',
+      mensaje: 'Cheque actualizado exitosamente.',
       cheque: {
         ...actualizado[0],
         metricas: calcularMetricasCheque(actualizado[0])

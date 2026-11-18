@@ -100,6 +100,83 @@ const CarteraModule = {
       selectTasaBanco.addEventListener('change', () => this.actualizarCalculoCobroEnVivo());
       selectTasaBanco.addEventListener('input', () => this.actualizarCalculoCobroEnVivo());
     }
+
+    // Modal Editar Cheque Form y Controles Reactivos
+    const formEditar = document.getElementById('formEditarCheque');
+    if (formEditar) {
+      formEditar.onsubmit = (e) => this.handleConfirmarEdicion(e);
+    }
+
+    const editImporte = document.getElementById('editChequeImporte');
+    const editFechaRecep = document.getElementById('editChequeFechaRecepcion');
+    const editFechaCobro = document.getElementById('editChequeFechaCobro');
+    const editTasa = document.getElementById('editChequeTasa');
+    const editTasaManual = document.getElementById('editChequeTasaManual');
+    const btnToggleEditTasa = document.getElementById('btnToggleEditTasaManual');
+    const btnCancelarEditTasa = document.getElementById('btnCancelarEditTasaManual');
+    const btnEditConsultarBcra = document.getElementById('btnEditChequeConsultarBcra');
+    const editBancoSelect = document.getElementById('editChequeBanco');
+    const editBancoOtro = document.getElementById('editChequeBancoOtro');
+
+    if (editImporte) editImporte.addEventListener('input', () => this.calcularEditEnVivo());
+    if (editFechaRecep) editFechaRecep.addEventListener('change', () => this.calcularEditEnVivo());
+    if (editFechaCobro) editFechaCobro.addEventListener('change', () => this.calcularEditEnVivo());
+
+    if (editTasa) {
+      editTasa.addEventListener('change', () => {
+        if (editTasa.value === '__MANUAL__') {
+          this.activarEditTasaManual(true);
+        } else {
+          this.calcularEditEnVivo();
+        }
+      });
+    }
+
+    if (btnToggleEditTasa) {
+      btnToggleEditTasa.addEventListener('click', () => this.activarEditTasaManual(true));
+    }
+    if (btnCancelarEditTasa) {
+      btnCancelarEditTasa.addEventListener('click', () => this.activarEditTasaManual(false));
+    }
+
+    if (editTasaManual) {
+      editTasaManual.addEventListener('keydown', (e) => {
+        const allowed = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+        if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+        if (/^[0-9]$/.test(e.key)) return;
+        if ((e.key === '.' || e.key === ',') && !editTasaManual.value.includes('.') && !editTasaManual.value.includes(',')) return;
+        e.preventDefault();
+      });
+
+      editTasaManual.addEventListener('input', () => {
+        let val = editTasaManual.value.replace(/[^0-9.,]/g, '');
+        const parts = val.split(/[.,]/);
+        if (parts.length > 2) {
+          val = parts[0] + '.' + parts.slice(1).join('');
+        }
+        if (val !== editTasaManual.value) {
+          editTasaManual.value = val;
+        }
+        this.calcularEditEnVivo();
+      });
+    }
+
+    if (btnEditConsultarBcra) {
+      btnEditConsultarBcra.addEventListener('click', () => this.consultarBcraDesdeEdicion());
+    }
+
+    if (editBancoSelect && editBancoOtro) {
+      editBancoSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'OTRO') {
+          editBancoOtro.style.display = 'block';
+          editBancoOtro.required = true;
+          editBancoOtro.focus();
+        } else {
+          editBancoOtro.style.display = 'none';
+          editBancoOtro.required = false;
+        }
+      });
+    }
   },
 
   poblarSelectTasaBanco() {
@@ -273,7 +350,7 @@ const CarteraModule = {
               `}
             </td>
 
-            <!-- Columna 5: Acciones Uniformes (Cobrado, Entregar, Rechazado, Eliminar) -->
+            <!-- Columna 5: Acciones Uniformes (Cobrado, Entregar, Rechazado, Editar, Revertir, Eliminar) -->
             <td>
               ${c.estado === 'Pendiente' ? `
                 <div class="table-actions-grid">
@@ -286,21 +363,38 @@ const CarteraModule = {
                   <button class="btn-action rechazar" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')" title="Marcar como Rechazado">
                     Rechazado
                   </button>
-                  <button class="btn-action eliminar" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar Cheque">
+                  <button class="btn-action editar" onclick="CarteraModule.abrirModalEditar(${c.id})" title="Editar datos del Cheque">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <span>Editar</span>
+                  </button>
+                  <button class="btn-action eliminar" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar Cheque" style="flex: 1 1 100%;">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     <span>Eliminar</span>
                   </button>
                 </div>
               ` : `
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                   <div>
                     <span class="badge-status ${estadoClass}">● ${c.estado}</span>
                     ${c.estado === 'Cobrado' && c.tipo_cobro ? `<div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">${c.tipo_cobro === 'ANTICIPADO' ? 'Cobro anticipado' : 'Cobro en fecha'}</div>` : ''}
                     ${c.motivo_rechazo ? `<div style="font-size: 0.72rem; color: var(--accent-rose);">Motivo: ${c.motivo_rechazo}</div>` : ''}
                   </div>
-                  <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); width: 30px; height: 30px; margin-left: auto;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
+                  <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="CarteraModule.revertirACartera(${c.id}, '${c.numero}')" title="Revertir acción y devolver a Cartera como Pendiente" style="padding: 3px 8px; font-size: 0.74rem; color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.45); display: inline-flex; align-items: center; gap: 4px;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                      <span>Revertir</span>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="CarteraModule.abrirModalEditar(${c.id})" title="Editar datos del Cheque" style="padding: 3px 8px; font-size: 0.74rem; color: #38bdf8; border-color: rgba(14, 165, 233, 0.4); display: inline-flex; align-items: center; gap: 4px;">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                      <span>Editar</span>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="CarteraModule.verDetalle(${c.id})" title="Ver Detalle" style="padding: 3px 8px; font-size: 0.74rem;">
+                      Detalle
+                    </button>
+                    <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose); width: 26px; height: 26px; margin-left: auto;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  </div>
                 </div>
               `}
             </td>
@@ -375,14 +469,23 @@ const CarteraModule = {
                 <button class="btn-action rechazar" onclick="CarteraModule.modalRechazar(${c.id}, '${c.numero}')">
                   Rechazado
                 </button>
+                <button class="btn-action editar" onclick="CarteraModule.abrirModalEditar(${c.id})">
+                  Editar
+                </button>
                 <button class="btn-icon-uniform" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
               </div>
             ` : `
               <div class="card-actions-row">
+                <button class="btn-action revertir" onclick="CarteraModule.revertirACartera(${c.id}, '${c.numero}')">
+                  Revertir
+                </button>
+                <button class="btn-action editar" onclick="CarteraModule.abrirModalEditar(${c.id})">
+                  Editar
+                </button>
                 <button class="btn btn-secondary btn-sm" onclick="CarteraModule.verDetalle(${c.id})" style="flex: 1;">
-                  Ver Detalle
+                  Detalle
                 </button>
                 <button class="btn-icon" onclick="CarteraModule.eliminarCheque(${c.id}, '${c.numero}')" title="Eliminar" style="color: var(--accent-rose);">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -583,6 +686,395 @@ const CarteraModule = {
     }
   },
 
+  async revertirACartera(id, numero) {
+    if (!confirm(`¿Confirmás revertir el cheque #${numero} a la Cartera?\n\nVolverá al estado PENDIENTE y se cancelará el registro de su cobro o rechazo.`)) {
+      return;
+    }
+    try {
+      const res = await API.patch(`/cheques/${id}/estado`, { nuevoEstado: 'Pendiente' });
+      showToast(res.mensaje || `Cheque #${numero} devuelto a Cartera como Pendiente.`, 'success');
+      this.cargarCheques();
+      if (typeof DashboardModule !== 'undefined' && DashboardModule.initialized) {
+        DashboardModule.cargarMetricas();
+      }
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  },
+
+  // ==========================================
+  // MODAL EDITAR CHEQUE
+  // ==========================================
+  chequeEdicionActual: null,
+
+  async abrirModalEditar(chequeId) {
+    try {
+      const res = await API.get(`/cheques/${chequeId}`);
+      const ch = res.cheque;
+      this.chequeEdicionActual = ch;
+
+      const modal = document.getElementById('modalEditarCheque');
+      if (!modal) return;
+
+      document.getElementById('editChequeId').value = ch.id;
+      document.getElementById('editChequeNumero').value = ch.numero || '';
+      document.getElementById('editChequeEmisor').value = ch.emisor || '';
+      document.getElementById('editChequeCuit').value = ch.cuit_emisor || '';
+      document.getElementById('editChequeFechaRecepcion').value = ch.fecha_recepcion ? ch.fecha_recepcion.split('T')[0] : '';
+      document.getElementById('editChequeFechaCobro').value = ch.fecha_cobro ? ch.fecha_cobro.split('T')[0] : '';
+      document.getElementById('editChequeImporte').value = ch.importe || '';
+      document.getElementById('editChequeNotas').value = ch.notas || '';
+
+      const badgeCuit = document.getElementById('editChequeCuitBadge');
+      if (badgeCuit) {
+        badgeCuit.style.display = 'none';
+        badgeCuit.innerHTML = '';
+      }
+
+      // Cargar clientes en select de entregador
+      await this.cargarComboEntregadorEdicion(ch.entregador);
+
+      // Cargar bancos en select de banco
+      await this.cargarComboBancosEdicion(ch.banco);
+
+      // Poblar selector de tasas y seleccionar/activar manual
+      this.poblarSelectTasasEdicion(ch.tasa_interes);
+
+      // Calcular preview inicial
+      this.calcularEditEnVivo();
+
+      modal.classList.add('show');
+    } catch (err) {
+      showToast('Error al cargar datos del cheque para editar: ' + err.message, 'error');
+    }
+  },
+
+  cerrarModalEditar() {
+    const modal = document.getElementById('modalEditarCheque');
+    if (modal) modal.classList.remove('show');
+    this.chequeEdicionActual = null;
+  },
+
+  async cargarComboEntregadorEdicion(entregadorActual = '') {
+    const select = document.getElementById('editChequeEntregador');
+    if (!select) return;
+
+    try {
+      const res = await API.get('/clientes');
+      const clientes = res.clientes || [];
+      const opts = ['<option value="">-- Seleccionar cliente --</option>'];
+
+      let encontrado = false;
+      clientes.forEach(cl => {
+        const sel = cl.nombre === entregadorActual ? 'selected' : '';
+        if (sel) encontrado = true;
+        opts.push(`<option value="${ConsultasModule.escapeHtml(cl.nombre)}" ${sel}>${ConsultasModule.escapeHtml(cl.nombre)}</option>`);
+      });
+
+      if (entregadorActual && !encontrado) {
+        opts.push(`<option value="${ConsultasModule.escapeHtml(entregadorActual)}" selected>${ConsultasModule.escapeHtml(entregadorActual)}</option>`);
+      }
+
+      select.innerHTML = opts.join('');
+    } catch (e) {
+      console.warn('Error al cargar clientes en modal editar:', e);
+      if (entregadorActual) {
+        select.innerHTML = `<option value="${ConsultasModule.escapeHtml(entregadorActual)}" selected>${ConsultasModule.escapeHtml(entregadorActual)}</option>`;
+      }
+    }
+  },
+
+  async cargarComboBancosEdicion(bancoActual = '') {
+    const select = document.getElementById('editChequeBanco');
+    const inputOtro = document.getElementById('editChequeBancoOtro');
+    if (!select) return;
+
+    const bancosPrincipales = [
+      'Banco Santander',
+      'Banco Galicia',
+      'Banco BBVA',
+      'Banco Macro',
+      'Banco Nación',
+      'Banco Provincia',
+      'Banco Ciudad',
+      'Banco Credicoop',
+      'Banco ICBC',
+      'Banco HSBC',
+      'Banco Patagonia',
+      'Banco Supervielle',
+      'Banco Comafi',
+      'Banco Hipotecario',
+      'Banco de Córdoba (Bancor)',
+      'Banco de Santa Fe',
+      'Banco Entre Ríos',
+      'Banco del Chaco',
+      'Banco San Juan',
+      'Banco Columbia',
+      'Banco Roela',
+      'Brubank',
+      'Ualá / Wilobank'
+    ];
+
+    let entidadesBcra = [];
+    try {
+      if (typeof ConsultasModule !== 'undefined' && typeof ConsultasModule.cargarEntidades === 'function') {
+        entidadesBcra = await ConsultasModule.cargarEntidades();
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    const opts = ['<option value="">-- Seleccionar Banco --</option>'];
+    let coincidencia = false;
+
+    bancosPrincipales.forEach(b => {
+      const isSel = b.toLowerCase() === (bancoActual || '').toLowerCase();
+      if (isSel) coincidencia = true;
+      opts.push(`<option value="${b}" ${isSel ? 'selected' : ''}>${b}</option>`);
+    });
+
+    if (entidadesBcra && entidadesBcra.length > 0) {
+      opts.push('<optgroup label="Otras Entidades Financieras BCRA">');
+      entidadesBcra.forEach(ent => {
+        if (!bancosPrincipales.some(b => b.toLowerCase().includes(ent.denominacion.toLowerCase()))) {
+          const isSel = ent.denominacion.toLowerCase() === (bancoActual || '').toLowerCase();
+          if (isSel) coincidencia = true;
+          opts.push(`<option value="${ConsultasModule.escapeHtml(ent.denominacion)}" ${isSel ? 'selected' : ''}>${ConsultasModule.escapeHtml(ent.denominacion)}</option>`);
+        }
+      });
+      opts.push('</optgroup>');
+    }
+
+    opts.push('<option value="OTRO">Otro banco / Entidad no listada...</option>');
+    select.innerHTML = opts.join('');
+
+    if (bancoActual && !coincidencia) {
+      select.value = 'OTRO';
+      if (inputOtro) {
+        inputOtro.style.display = 'block';
+        inputOtro.value = bancoActual;
+      }
+    } else {
+      if (inputOtro) {
+        inputOtro.style.display = 'none';
+        inputOtro.value = '';
+      }
+    }
+  },
+
+  poblarSelectTasasEdicion(tasaActual = 5) {
+    const select = document.getElementById('editChequeTasa');
+    if (!select) return;
+
+    const numTasa = parseFloat(tasaActual) || 0;
+    const opciones = [];
+    let coincideExacto = false;
+
+    for (let t = 0.5; t <= 30; t += 0.5) {
+      const isSel = Math.abs(t - numTasa) < 0.001;
+      if (isSel) coincideExacto = true;
+      const label = Number.isInteger(t) ? `${t} %` : `${String(t).replace('.', ',')} %`;
+      opciones.push(`<option value="${t}" ${isSel ? 'selected' : ''}>${label}</option>`);
+    }
+
+    opciones.push('<option value="__MANUAL__">✏️ Otro (escribir a mano)...</option>');
+    select.innerHTML = opciones.join('');
+
+    if (coincideExacto) {
+      this.activarEditTasaManual(false);
+    } else {
+      this.activarEditTasaManual(true, numTasa);
+    }
+  },
+
+  activarEditTasaManual(activo, valorInicial = null) {
+    const select = document.getElementById('editChequeTasa');
+    const container = document.getElementById('containerEditTasaManual');
+    const input = document.getElementById('editChequeTasaManual');
+    const btnToggle = document.getElementById('btnToggleEditTasaManual');
+
+    if (!container) return;
+
+    if (activo) {
+      container.style.display = 'block';
+      if (select) select.style.display = 'none';
+      if (btnToggle) btnToggle.style.display = 'none';
+      if (input) {
+        if (valorInicial !== null && valorInicial !== undefined) {
+          input.value = valorInicial;
+        } else if (!input.value && select && select.value !== '__MANUAL__') {
+          input.value = select.value;
+        }
+        input.focus();
+        input.select();
+      }
+    } else {
+      container.style.display = 'none';
+      if (select) {
+        select.style.display = 'block';
+        if (select.value === '__MANUAL__') select.value = '5';
+      }
+      if (btnToggle) btnToggle.style.display = 'inline-block';
+    }
+    this.calcularEditEnVivo();
+  },
+
+  obtenerTasaEdicion() {
+    const container = document.getElementById('containerEditTasaManual');
+    const input = document.getElementById('editChequeTasaManual');
+    const select = document.getElementById('editChequeTasa');
+
+    if (container && container.style.display !== 'none' && input) {
+      const num = parseFloat(input.value.replace(',', '.'));
+      return isNaN(num) ? 0 : Math.max(0, num);
+    }
+
+    if (select) {
+      if (select.value === '__MANUAL__') {
+        const num = parseFloat(input?.value.replace(',', '.') || '0');
+        return isNaN(num) ? 0 : Math.max(0, num);
+      }
+      const num = parseFloat(select.value);
+      return isNaN(num) ? 0 : Math.max(0, num);
+    }
+    return 0;
+  },
+
+  calcularEditEnVivo() {
+    const importeEl = document.getElementById('editChequeImporte');
+    const fechaRecepEl = document.getElementById('editChequeFechaRecepcion');
+    const fechaCobroEl = document.getElementById('editChequeFechaCobro');
+
+    const importe = parseFloat(importeEl?.value) || 0;
+    const tasa = this.obtenerTasaEdicion();
+
+    const interesCobrado = Math.round((importe * (tasa / 100)) * 100) / 100;
+    const dineroSaliente = Math.round((importe - interesCobrado) * 100) / 100;
+
+    let diasPlazo = 0;
+    if (fechaRecepEl?.value && fechaCobroEl?.value) {
+      const f1 = new Date(fechaRecepEl.value);
+      const f2 = new Date(fechaCobroEl.value);
+      const diffMs = f2.getTime() - f1.getTime();
+      diasPlazo = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    const previewImporte = document.getElementById('editPreviewImporte');
+    const previewInteres = document.getElementById('editPreviewInteres');
+    const previewSaliente = document.getElementById('editPreviewSaliente');
+    const previewDias = document.getElementById('editPreviewDias');
+
+    if (previewImporte) previewImporte.textContent = formatARS(importe);
+    if (previewInteres) previewInteres.textContent = formatARS(interesCobrado);
+    if (previewSaliente) previewSaliente.textContent = formatARS(dineroSaliente);
+    if (previewDias) previewDias.textContent = diasPlazo >= 0 ? `${diasPlazo} días` : 'Fecha cobro anterior a recepción';
+  },
+
+  async consultarBcraDesdeEdicion() {
+    const inputCuit = document.getElementById('editChequeCuit');
+    const badge = document.getElementById('editChequeCuitBadge');
+    const cuitRaw = inputCuit?.value || '';
+    const cuitDigitos = cuitRaw.replace(/\D/g, '');
+
+    if (!/^\d{11}$/.test(cuitDigitos)) {
+      showToast('Ingresá un CUIT válido de 11 dígitos para consultar el BCRA.', 'error');
+      inputCuit?.focus();
+      return;
+    }
+
+    if (badge) {
+      badge.style.display = 'block';
+      badge.className = 'bcra-inline-status cargando';
+      badge.innerHTML = `<span>Consultando BCRA...</span>`;
+    }
+
+    try {
+      const res = await API.get(`/bcra/deudores/${cuitDigitos}`);
+      const sitMax = res.resumen?.peorSituacion || 1;
+      const tieneRechazos = (res.resumen?.chequesRechazadosCount || 0) > 0;
+
+      if (badge) {
+        if (sitMax >= 3 || tieneRechazos) {
+          badge.className = 'bcra-inline-status alerta';
+          badge.innerHTML = `<span>⚠️ BCRA: Sit. ${sitMax}${tieneRechazos ? ` • ${res.resumen.chequesRechazadosCount} rechazo(s)` : ''}</span>`;
+        } else {
+          badge.className = 'bcra-inline-status normal';
+          badge.innerHTML = `<span>✓ BCRA: Sit. ${sitMax} (Normal)</span>`;
+        }
+      }
+
+      if (typeof IngresoModule !== 'undefined' && typeof IngresoModule.abrirModalReporteBcra === 'function') {
+        IngresoModule.abrirModalReporteBcra(res);
+      }
+    } catch (e) {
+      if (badge) {
+        badge.className = 'bcra-inline-status';
+        badge.innerHTML = `<span style="color: var(--accent-rose);">Error al consultar BCRA</span>`;
+      }
+      showToast('Error consultando BCRA: ' + e.message, 'error');
+    }
+  },
+
+  async handleConfirmarEdicion(e) {
+    e.preventDefault();
+    const id = document.getElementById('editChequeId')?.value;
+    if (!id) return;
+
+    const btnSubmit = document.getElementById('btnSubmitEditCheque');
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span>Guardando...</span>';
+    }
+
+    try {
+      const bancoSelect = document.getElementById('editChequeBanco');
+      const bancoOtro = document.getElementById('editChequeBancoOtro');
+      const banco = bancoSelect.value === 'OTRO' ? bancoOtro.value.trim() : bancoSelect.value;
+
+      const cuitRaw = document.getElementById('editChequeCuit')?.value || '';
+      const cuitDigitos = cuitRaw.replace(/\D/g, '');
+      if (!/^\d{11}$/.test(cuitDigitos)) {
+        showToast('El CUIT del Emisor debe tener 11 dígitos numéricos.', 'error');
+        document.getElementById('editChequeCuit')?.focus();
+        return;
+      }
+
+      const tasaValor = this.obtenerTasaEdicion();
+      if (isNaN(tasaValor) || tasaValor < 0) {
+        showToast('La tasa de interés debe ser un número válido.', 'error');
+        return;
+      }
+
+      const payload = {
+        numero: document.getElementById('editChequeNumero').value.trim(),
+        banco: banco,
+        emisor: document.getElementById('editChequeEmisor').value.trim(),
+        cuit_emisor: cuitDigitos,
+        entregador: document.getElementById('editChequeEntregador').value.trim(),
+        fecha_recepcion: document.getElementById('editChequeFechaRecepcion').value,
+        fecha_cobro: document.getElementById('editChequeFechaCobro').value,
+        importe: parseFloat(document.getElementById('editChequeImporte').value),
+        tasa_interes: tasaValor,
+        notas: document.getElementById('editChequeNotas')?.value.trim() || ''
+      };
+
+      const res = await API.put(`/cheques/${id}`, payload);
+      showToast(res.mensaje || 'Cheque actualizado exitosamente.', 'success');
+      this.cerrarModalEditar();
+      await this.cargarCheques();
+      if (typeof DashboardModule !== 'undefined' && DashboardModule.initialized) {
+        DashboardModule.cargarMetricas();
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>Guardar Cambios</span>';
+      }
+    }
+  },
+
   async eliminarCheque(id, numero) {
     if (confirm(`¿Está seguro de eliminar el Cheque N° ${numero}? Esta acción no se puede deshacer.`)) {
       try {
@@ -604,8 +1096,7 @@ const CarteraModule = {
       const infoCobro = ch.estado === 'Cobrado'
         ? `\nModalidad Cobro: ${ch.tipo_cobro === 'ANTICIPADO' ? 'Anticipado (Venta al banco)' : 'En fecha (Impuesto al cheque)'}\nDescuento Banco (${ch.tasa_descuento_banco || 0}%): -${formatARS(descBanco)}\nGanancia Neta Final: ${formatARS(gananciaNeta)}`
         : '';
-      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
-      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}${ch.cuit_emisor ? `\nCUIT Emisor: ${ch.cuit_emisor}` : ''}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
+      alert(`INFORMACIÓN DEL CHEQUE N° ${ch.numero}\n\nBanco: ${ch.banco}\nEmisor: ${ch.emisor}${ch.cuit_emisor ? `\nCUIT Emisor: ${ch.cuit_emisor}` : ''}\nEntregador: ${ch.entregador}\nImporte: ${formatARS(ch.importe)}\nTasa: ${ch.tasa_interes}%\nGanancia Interés Inicial: ${formatARS(ch.interes_cobrado)}${infoCobro}\nEstado: ${ch.estado}\nFecha Cobro: ${formatFecha(ch.fecha_cobro)}\nVencimiento Legal (30d): ${ch.metricas?.fechaVencimientoLegal || '-'}\n${ch.notas ? 'Notas: ' + ch.notas : ''}`);
     } catch (e) {
       showToast(e.message, 'error');
     }

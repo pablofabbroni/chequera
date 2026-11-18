@@ -232,11 +232,21 @@ const ConsultasModule = {
             <table class="custom-table" style="font-size: 0.82rem;">
               <thead>
                 <tr>
-                  <th style="width: 32%;">Entidad</th>
+                  <th style="width: 30%;">Entidad</th>
                   <th style="width: 14%;">Situación</th>
                   <th style="width: 18%;">Monto ($)</th>
-                  <th style="width: 12%;">Atraso</th>
-                  <th style="width: 24%;">Observaciones</th>
+                  <th style="width: 14%;">
+                    Atraso
+                    <button type="button" class="bcra-info-btn" onclick="ConsultasModule.mostrarInfoCampo('atraso')" title="¿Qué significa Atraso?">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    </button>
+                  </th>
+                  <th style="width: 24%;">
+                    Observaciones
+                    <button type="button" class="bcra-info-btn" onclick="ConsultasModule.mostrarInfoCampo('observaciones')" title="¿Qué significa Observaciones?">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -264,18 +274,38 @@ const ConsultasModule = {
             </table>
           </div>
           <div class="mobile-cards-view">
-            ${entidades.map(ent => `
-              <div class="check-card-item">
-                <div class="card-row-top">
-                  <span class="card-check-num" style="font-size: 0.85rem;">${this.escapeHtml(ent.entidad)}</span>
-                  ${this.getSituacionBadge(ent.situacion)}
+            ${entidades.map(ent => {
+              const flags = [];
+              if (ent.refinanciaciones) flags.push('Refinanciación');
+              if (ent.recategorizacionOblig) flags.push('Recategorización');
+              if (ent.situacionJuridica) flags.push('Sit. Jurídica');
+              if (ent.irrecDisposicionTecnica) flags.push('Irrec. Disp. Téc.');
+              if (ent.procesoJud) flags.push('Proceso Judicial');
+              if (ent.enRevision) flags.push('En Revisión');
+              return `
+                <div class="check-card-item">
+                  <div class="card-row-top">
+                    <span class="card-check-num" style="font-size: 0.85rem;">${this.escapeHtml(ent.entidad)}</span>
+                    ${this.getSituacionBadge(ent.situacion)}
+                  </div>
+                  <div class="card-meta-grid">
+                    <div>Monto: <span class="val">${formatARS(ent.montoPesos)}</span></div>
+                    <div>
+                      Atraso
+                      <button type="button" class="bcra-info-btn" onclick="ConsultasModule.mostrarInfoCampo('atraso')" title="Info Atraso">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                      </button>: <span class="val">${ent.diasAtrasoPago > 0 ? ent.diasAtrasoPago + ' días' : '0 días'}</span>
+                    </div>
+                    <div style="grid-column: span 2;">
+                      Observaciones
+                      <button type="button" class="bcra-info-btn" onclick="ConsultasModule.mostrarInfoCampo('observaciones')" title="Info Observaciones">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                      </button>: <span class="val" style="color: ${flags.length ? '#fb7185' : 'var(--text-dim)'};">${flags.length ? this.escapeHtml(flags.join(' • ')) : 'Normal'}</span>
+                    </div>
+                  </div>
                 </div>
-                <div class="card-meta-grid">
-                  <div>Monto: <span class="val">${formatARS(ent.montoPesos)}</span></div>
-                  <div>Atraso: <span class="val">${ent.diasAtrasoPago} días</span></div>
-                </div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       `
@@ -455,5 +485,53 @@ const ConsultasModule = {
         </p>
       </div>
     `;
+  },
+
+  mostrarInfoCampo(campo) {
+    const modal = document.getElementById('modalInfoBcraCampo');
+    const titulo = document.getElementById('modalInfoBcraTitulo');
+    const cuerpo = document.getElementById('modalInfoBcraCuerpo');
+
+    if (campo === 'atraso') {
+      if (titulo) titulo.innerHTML = 'ℹ️ Campo "Atraso" (Días de Mora)';
+      if (cuerpo) {
+        cuerpo.innerHTML = `
+          <p style="margin-bottom: 12px; color: #fff;">
+            <strong>¿Qué significa este campo?</strong>
+          </p>
+          <p style="margin-bottom: 10px;">
+            Indica la <strong>cantidad de días corridos de atraso o mora</strong> reportados por la entidad financiera en el cumplimiento del pago de préstamos, tarjetas de crédito o descubiertos en cuenta corriente.
+          </p>
+          <ul style="padding-left: 20px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px;">
+            <li><strong style="color: var(--accent-emerald);">0 días (o 0d):</strong> El titular se encuentra <strong>al día</strong> y sin retrasos informados en sus pagos.</li>
+            <li><strong style="color: var(--accent-amber);">1 a 30 días:</strong> Atrasos iniciales o pagos fuera de término leves.</li>
+            <li><strong style="color: var(--accent-rose);">Más de 31 días:</strong> Mora prolongada informada al BCRA que incide directamente en la desmejora de la Situación Crediticia.</li>
+          </ul>
+          <span style="font-size: 0.78rem; color: var(--text-dim);">Dato oficial provisto por la Central de Deudores del Banco Central (BCRA).</span>
+        `;
+      }
+    } else if (campo === 'observaciones') {
+      if (titulo) titulo.innerHTML = 'ℹ️ Campo "Observaciones" (Condición Legal)';
+      if (cuerpo) {
+        cuerpo.innerHTML = `
+          <p style="margin-bottom: 12px; color: #fff;">
+            <strong>¿Qué significa este campo?</strong>
+          </p>
+          <p style="margin-bottom: 10px;">
+            Detalla <strong>contingencias especiales, acuerdos o instancias legales</strong> informadas por la entidad bancaria al BCRA bajo la normativa de clasificación de deudores:
+          </p>
+          <ul style="padding-left: 20px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px;">
+            <li><strong style="color: #38bdf8;">Normal:</strong> Deuda bajo condiciones contractuales ordinarias, sin contingencias judiciales.</li>
+            <li><strong style="color: var(--accent-amber);">Refinanciación:</strong> Deuda reprogramada o refinanciada con nuevos plazos o cuotas.</li>
+            <li><strong style="color: var(--accent-rose);">Sit. Jurídica / Proceso Judicial:</strong> Deuda en gestión prejudicial o judicial (juicio ejecutivo, cobro judicial o concurso preventivo).</li>
+            <li><strong style="color: var(--accent-rose);">Recategorización Obligatoria:</strong> Calificación desmejorada por normas obligatorias del BCRA (por ejemplo por atrasos en otros bancos).</li>
+            <li><strong style="color: var(--text-dim);">En Revisión:</strong> Reclamo o discrepancia administrativa en trámite ante la entidad.</li>
+          </ul>
+          <span style="font-size: 0.78rem; color: var(--text-dim);">Dato oficial provisto por la Central de Deudores del Banco Central (BCRA).</span>
+        `;
+      }
+    }
+
+    if (modal) modal.classList.add('show');
   }
 };
